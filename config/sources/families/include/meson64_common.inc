@@ -20,11 +20,19 @@ CPUMAX=1536000
 GOVERNOR=conservative
 
 case $BRANCH in
-	
+
 	legacy)
 		KERNELSOURCE='https://github.com/hardkernel/linux'
 		KERNELBRANCH='branch:odroidg12-4.9.y'
 		KERNELDIR='linux-odroid'
+	;;
+
+	tobetter)
+		KERNELSOURCE='https://github.com/tobetter/linux'
+		KERNELBRANCH='branch:odroid-5.10.y'
+		KERNELDIR='linux-odroid-tobetter'
+		KERNELPATCHDIR='meson64-tobetter'
+		LINUXCONFIG="linux-meson64-tobetter"
 	;;
 
         current)
