@@ -444,14 +444,17 @@ install_common()
 	# enable PubkeyAuthentication
 	sed -i 's/#\?PubkeyAuthentication .*/PubkeyAuthentication yes/' "${SDCARD}"/etc/ssh/sshd_config
 
-	# configure network manager
-	sed "s/managed=\(.*\)/managed=true/g" -i "${SDCARD}"/etc/NetworkManager/NetworkManager.conf
+	# configure network manager, if installed
+	[[ -f "${SDCARD}"/etc/NetworkManager/NetworkManager.conf ]] && \
+		sed "s/managed=\(.*\)/managed=true/g" -i "${SDCARD}"/etc/NetworkManager/NetworkManager.conf
 
 	# remove network manager defaults to handle eth by default
 	rm -f "${SDCARD}"/usr/lib/NetworkManager/conf.d/10-globally-managed-devices.conf
 
 	# most likely we don't need to wait for nm to get online
-	chroot "${SDCARD}" /bin/bash -c "systemctl disable NetworkManager-wait-online.service" >> "${DEST}"/debug/install.log 2>&1
+	# it is indeed most unlikely; but cloud-init requires the net to be up to be useful.
+	[[ ! -f "${SDCARD}"/usr/bin/cloud-init ]] && \
+		chroot "${SDCARD}" /bin/bash -c "systemctl disable NetworkManager-wait-online.service" >> "${DEST}"/debug/install.log 2>&1
 
 	# avahi daemon defaults if exists
 	[[ -f "${SDCARD}"/usr/share/doc/avahi-daemon/examples/sftp-ssh.service ]] && \
@@ -459,6 +462,7 @@ install_common()
 	[[ -f "${SDCARD}"/usr/share/doc/avahi-daemon/examples/ssh.service ]] && \
 	cp "${SDCARD}"/usr/share/doc/avahi-daemon/examples/ssh.service "${SDCARD}"/etc/avahi/services/
 
+	if [[ ! -f "${SDCARD}"/usr/sbin/netplan ]]; then
 	# Just regular DNS and maintain /etc/resolv.conf as a file
 	sed "/dns/d" -i "${SDCARD}"/etc/NetworkManager/NetworkManager.conf
 	sed "s/\[main\]/\[main\]\ndns=default\nrc-manager=file/g" -i "${SDCARD}"/etc/NetworkManager/NetworkManager.conf
@@ -468,6 +472,7 @@ install_common()
 		[keyfile]
 		unmanaged-devices=$NM_IGNORE_DEVICES
 		EOF
+		fi
 	fi
 
 	# nsswitch settings for sane DNS behavior: remove resolve, assure libnss-myhostname support
@@ -575,7 +580,9 @@ install_distribution_specific()
 			install_rclocal
 
 			# Basic Netplan config. Let NetworkManager manage all devices on this system
-			[[ -d "${SDCARD}"/etc/netplan ]] && cat <<-EOF > "${SDCARD}"/etc/netplan/armbian-default.yaml
+			# Unless, of course, we are not using NetworkManager...
+			[[ -f "${SDCARD}"/etc/NetworkManager/NetworkManager.conf ]] && \
+				[[ -d "${SDCARD}"/etc/netplan ]] && cat <<-EOF > "${SDCARD}"/etc/netplan/armbian-default.yaml
 			network:
 			  version: 2
 			  renderer: NetworkManager
@@ -613,5 +620,8 @@ post_debootstrap_tweaks()
 	chroot "${SDCARD}" /bin/bash -c "dpkg-divert --quiet --local --rename --remove /sbin/initctl"
 	chroot "${SDCARD}" /bin/bash -c "dpkg-divert --quiet --local --rename --remove /sbin/start-stop-daemon"
 	rm -f "${SDCARD}"/usr/sbin/policy-rc.d "${SDCARD}/usr/bin/${QEMU_BINARY}"
+
+	# delegate back to config
+	[[ $(type -t config_post_debootstrap_tweaks) == function ]] && config_post_debootstrap_tweaks
 
 }

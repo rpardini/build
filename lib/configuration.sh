@@ -114,6 +114,9 @@ fi
 # load architecture defaults
 source "${SRC}/config/sources/${ARCH}.conf"
 
+# give the config a chance to override the family/arch defaults
+[[ $(type -t config_tweaks_post_family_config) == function ]] && config_tweaks_post_family_config
+
 # dropbear needs to be configured differently
 [[ $CRYPTROOT_ENABLE == yes && $RELEASE == xenial ]] && exit_with_error "Encrypted rootfs is not supported in Xenial"
 [[ $RELEASE == stretch && $CAN_BUILD_STRETCH != yes ]] && exit_with_error "Building Debian Stretch images with selected kernel is not supported"
