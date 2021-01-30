@@ -382,6 +382,12 @@ prepare_partitions()
 		BOOTSIZE=0
 	fi
 
+	# call custom function if defined
+	if [[ "$(type -t prepare_partitions_custom)" == "function" ]]; then
+		display_alert "Invoke function with user override" "prepare_partitions_custom" "info"
+		prepare_partitions_custom
+	fi
+
 	# stage: calculate rootfs size
 	local rootfs_size=$(du -sm $SDCARD/ | cut -f1) # MiB
 	display_alert "Current rootfs size" "$rootfs_size MiB" "info"
