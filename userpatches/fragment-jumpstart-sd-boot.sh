@@ -1,4 +1,4 @@
-#! /bin/bash
+display_alert "Activating fragment" "fragment-jumpstart-sd-boot" "info"
 
 # These boards need to boot from an UUID... not LABEL=xx
 export SD_ROOT_DEV="UUID=11111111-1111-1111-1111-111111111111";
@@ -16,9 +16,9 @@ prepare_partitions_custom() {
 
 
 
-
 image_tweaks_pre_customize__jumpstart() {
 	display_alert "Custom config stage" "image_tweaks_pre_customize__jumpstart" "info"
+	set -x
 
 	##### # Expand the binaries.
 	##### # Right now there is a 50mb blob of balbes150's last working build.
@@ -27,14 +27,14 @@ image_tweaks_pre_customize__jumpstart() {
 	JUMPSTART_BINARY_TARBALL="$USERPATCHES_PATH/overlay/jumpstart/${JUMPSTART_ID}.tar.xz"
 	if [[ -f "${JUMPSTART_BINARY_TARBALL}" ]]; then
 		display_alert "Expanding binary pack" "${JUMPSTART_BINARY_TARBALL}" "info"
-		PRE_PWD="$(pwd)" cd "$USERPATCHES_PATH/overlay" || exit 1
+		PRE_PWD="$(pwd)" cd "$USERPATCHES_PATH/overlay/jumpstart" || exit 1
 		[[ ! -f untarred ]] && tar xJf "${JUMPSTART_ID}.tar.xz" && touch untarred
 		cd "${PRE_PWD}" || exit 2
 	fi
 
 	# Copy over the expanded balbe stuff from the overlay. it shall not overwrite anything...
-	cp -r "${USERPATCHES_PATH}"/overlay/jumpstart/sd-boot/* "${SDCARD}"/boot/
-	cp -r "${USERPATCHES_PATH}"/overlay/jumpstart/sd-root-root/* "${SDCARD}"/root/
+	cp -r -v "${USERPATCHES_PATH}"/overlay/jumpstart/sd-boot/* "${SDCARD}"/boot/
+	cp -r -v "${USERPATCHES_PATH}"/overlay/jumpstart/sd-root-root/* "${SDCARD}"/root/
 
 	# These two will come from the binary pack.
 	[[ -d "${USERPATCHES_PATH}"/overlay/jumpstart/sd-boot-kernel ]] && cp -r "${USERPATCHES_PATH}"/overlay/jumpstart/sd-boot-kernel/* "${SDCARD}"/boot/
@@ -68,6 +68,8 @@ image_tweaks_pre_customize__jumpstart() {
 
 	# balbe150 provides 3 variations of u-boot, configure in <board>.conf
 	cp "${SDCARD}/boot/${JUMPSTART_UBOOT}" "${SDCARD}"/boot/u-boot.ext
+
+	set +x
 }
 
 # process template from stdin to stdout using the vars
