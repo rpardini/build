@@ -636,11 +636,18 @@ create_image()
 	# fix wrong / permissions
 	chmod 755 $MOUNT
 
+	# allow config to hack into the image before the unmount...
+	[[ $(type -t config_pre_umount_final_image) == function ]] && config_pre_umount_final_image
+
 	# unmount /boot first, rootfs second, image file last
 	sync
 	[[ $BOOTSIZE != 0 ]] && umount -l $MOUNT/boot
 	[[ $ROOTFS_TYPE != nfs ]] && umount -l $MOUNT
 	[[ $CRYPTROOT_ENABLE == yes ]] && cryptsetup luksClose $ROOT_MAPPER
+
+	# allow config to hack into the image after the unmount...
+	[[ $(type -t config_post_umount_final_image) == function ]] && config_post_umount_final_image
+
 
 	# to make sure its unmounted
 	while grep -Eq '(${MOUNT}|${DESTIMG})' /proc/mounts

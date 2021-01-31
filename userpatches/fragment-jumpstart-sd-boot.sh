@@ -1,24 +1,28 @@
 display_alert "Activating fragment" "fragment-jumpstart-sd-boot" "info"
 
 # These boards need to boot from an UUID... not LABEL=xx
-export SD_ROOT_DEV="UUID=11111111-1111-1111-1111-111111111111";
+export SD_ROOT_DEV_UUID="11111111-1111-1111-1111-111111111111";
+export SD_ROOT_DEV="UUID=${SD_ROOT_DEV_UUID}";
 
 # last chance to modify mkopts and such, add labels to partitions
 prepare_partitions_custom() {
 	display_alert "Custom config stage" "prepare_partitions_custom" "info"
-
-	echo "existing fat opts: ${mkopts[fat]}"
-	echo "existing ext4 opts: ${mkopts[ext4]}"
-	mkopts[ext4]="-U ${SD_ROOT_DEV} ${mkopts[ext4]}"
-	echo "new ext4 opts: ${mkopts[ext4]}"
-	echo "new fat opts: ${mkopts[fat]}"
+	display_alert "prepare_partitions_custom adding to mfks ext4" "-U ${SD_ROOT_DEV_UUID}" "info"
+	mkopts[ext4]="-U ${SD_ROOT_DEV_UUID} ${mkopts[ext4]}"
 }
 
+user_config__decompress_blobs() {
+	display_alert "Custom config stage" "user_config__decompress_blobs" "info"
+	[[ ! -f "$USERPATCHES_PATH/overlay/jumpstart/sd-root-root/balbe_bootloader_sd_4mb.img" ]] && \
+		unxz -k "$USERPATCHES_PATH/overlay/jumpstart/sd-root-root/balbe_bootloader_sd_4mb.img.xz"
+
+	[[ ! -f "$USERPATCHES_PATH/overlay/jumpstart/sd-root-root/t95z_working_uboot.img" ]] && \
+		unxz -k "$USERPATCHES_PATH/overlay/jumpstart/sd-root-root/t95z_working_uboot.img.xz"
+}
 
 
 image_tweaks_pre_customize__jumpstart() {
 	display_alert "Custom config stage" "image_tweaks_pre_customize__jumpstart" "info"
-	set -x
 
 	##### # Expand the binaries.
 	##### # Right now there is a 50mb blob of balbes150's last working build.
@@ -49,6 +53,7 @@ image_tweaks_pre_customize__jumpstart() {
 	cat "${USERPATCHES_PATH}"/overlay/jumpstart/sd-boot/extlinux/extlinux-jumpstart-balbe.conf | process_jumpstart_template >"${SDCARD}"/boot/extlinux/extlinux-jumpstart-balbe.conf
 	cat "${USERPATCHES_PATH}"/overlay/jumpstart/sd-boot/extlinux/extlinux-jumpstart-built-kernel.conf | process_jumpstart_template >"${SDCARD}"/boot/extlinux/extlinux-jumpstart-built-kernel.conf
 	cat "${USERPATCHES_PATH}"/overlay/jumpstart/sd-root-root/flash_emmc.sh | process_jumpstart_template >"${SDCARD}"/root/flash_emmc.sh
+	chmod +x "${SDCARD}"/root/flash_emmc.sh
 
 	echo ".... will use ${CHOSEN_EXTLINUX_JUMPSTART} for jumpstart ..."
 	cp -v "${SDCARD}/boot/extlinux/${CHOSEN_EXTLINUX_JUMPSTART}" "${SDCARD}"/boot/extlinux/extlinux.conf
@@ -69,7 +74,6 @@ image_tweaks_pre_customize__jumpstart() {
 	# balbe150 provides 3 variations of u-boot, configure in <board>.conf
 	cp "${SDCARD}/boot/${JUMPSTART_UBOOT}" "${SDCARD}"/boot/u-boot.ext
 
-	set +x
 }
 
 # process template from stdin to stdout using the vars
