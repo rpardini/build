@@ -37,8 +37,8 @@ image_tweaks_pre_customize__jumpstart() {
 	fi
 
 	# Copy over the expanded balbe stuff from the overlay. it shall not overwrite anything...
-	cp -r -v "${USERPATCHES_PATH}"/overlay/jumpstart/sd-boot/* "${SDCARD}"/boot/
-	cp -r -v "${USERPATCHES_PATH}"/overlay/jumpstart/sd-root-root/* "${SDCARD}"/root/
+	cp -r  "${USERPATCHES_PATH}"/overlay/jumpstart/sd-boot/* "${SDCARD}"/boot/
+	cp -r  "${USERPATCHES_PATH}"/overlay/jumpstart/sd-root-root/* "${SDCARD}"/root/
 
 	# These two will come from the binary pack.
 	[[ -d "${USERPATCHES_PATH}"/overlay/jumpstart/sd-boot-kernel ]] && cp -r "${USERPATCHES_PATH}"/overlay/jumpstart/sd-boot-kernel/* "${SDCARD}"/boot/
@@ -46,7 +46,7 @@ image_tweaks_pre_customize__jumpstart() {
 
 	# remove armbianEnv.txt -- would be very confusing if both extlinux and armbianEnv where on an SD card.
 	# @TODO: also debootstrap.sh manipulates it directly if it exists, after customizing the image. Which is bad.
-	mv -v "${SDCARD}"/boot/armbianEnv.txt "${SDCARD}"/boot/preJumpstart_armbianEnv.txt || true
+	mv "${SDCARD}"/boot/armbianEnv.txt "${SDCARD}"/boot/preJumpstart_armbianEnv.txt || true
 
 	echo "... processing jumpstart templates ..."
 	cat "${USERPATCHES_PATH}"/overlay/jumpstart/sd-boot/extlinux/extlinux-emmc-built-kernel.conf | process_jumpstart_template >"${SDCARD}"/boot/extlinux/extlinux-emmc-built-kernel.conf
@@ -56,18 +56,21 @@ image_tweaks_pre_customize__jumpstart() {
 	chmod +x "${SDCARD}"/root/flash_emmc.sh
 
 	echo ".... will use ${CHOSEN_EXTLINUX_JUMPSTART} for jumpstart ..."
-	cp -v "${SDCARD}/boot/extlinux/${CHOSEN_EXTLINUX_JUMPSTART}" "${SDCARD}"/boot/extlinux/extlinux.conf
+	cp  "${SDCARD}/boot/extlinux/${CHOSEN_EXTLINUX_JUMPSTART}" "${SDCARD}"/boot/extlinux/extlinux.conf
 
-	cp -rv "${USERPATCHES_PATH}"/overlay/jumpstart/sd-boot/autoscripts "${SDCARD}"/boot/
+	cp -r "${USERPATCHES_PATH}"/overlay/jumpstart/sd-boot/autoscripts "${SDCARD}"/boot/
+
+	display_alert "Compiling aml scripts" "${SDCARD}/boot/autoscripts/" "info"
 	mkimage -A arm -O linux -T script -C none -d "${SDCARD}"/boot/autoscripts/aml_autoscript.txt "${SDCARD}"/boot/aml_autoscript
 	mkimage -A arm -O linux -T script -C none -d "${SDCARD}"/boot/autoscripts/emmc_autoscript.txt "${SDCARD}"/boot/emmc_autoscript
 	mkimage -A arm -O linux -T script -C none -d "${SDCARD}"/boot/autoscripts/s905_autoscript.txt "${SDCARD}"/boot/s905_autoscript
+	display_alert "Done compiling aml scripts" "${SDCARD}/boot/autoscripts/" "info"
 
 	echo ".... creating aml_autoscript.zip ...."
 	echo "fake zip for for android to boot from this sd card" >"${SDCARD}"/boot/aml_autoscript.zip
 
 	# for sure boot.cmd and boot.scr are not used, at least for s912
-	# rm -f "${SDCARD}"/boot/boot.cmd "${SDCARD}"/boot/boot.scr
+	rm -f "${SDCARD}"/boot/boot.cmd "${SDCARD}"/boot/boot.scr "${SDCARD}"/boot/boot.bmp
 
 	#@ TODO: what about boot.ini ???
 
