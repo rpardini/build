@@ -359,13 +359,9 @@ source "${SRC}"/lib/configuration.sh
 # on hyperthreaded systems, nproc counts hyperthreads, not cores. so maybe not ideal on non HT-systems
 # or when running on VMs whose hypervisors lie about topology.
 if [[ $USEALLCORES != no ]]; then
-
-	CTHREADS="-j$((CPUS + CPUS/2))"
-
+	CTHREADS="-j$(nproc --ignore=1)"
 else
-
 	CTHREADS="-j1"
-
 fi
 
 if [[ $BETA == yes ]]; then

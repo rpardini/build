@@ -8,13 +8,18 @@ set -e
 # Uncomment this to debug
 # set -x
 
+logger_termopt="-Txterm-256color"
+logger_bold="$(tput ${logger_termopt} bold)"
+logger_normal="$(tput ${logger_termopt} sgr0)"
+
 display_msg() {
-	echo -e "\033[1;37m--> $@"
+	echo "${logger_normal}--> ${logger_bold}$@${logger_normal}"
 }
 
 DATE_ID=$(date +"%d_%m_%Y_%H_%M_%S")
 
-# copy updated: rm -rf /target_emmc_install/ &&  scp root@192.168.66.60:/home/pardini/armbian/t95z_tip/userpatches/overlay/jumpstart/sd-root-root/flash_emmc.sh flash_emmc.sh && ./flash_emmc.sh
+# copy updated: rm -rf /target_emmc_install/ &&
+# scp root@192.168.66.60:/home/pardini/armbian/work/userpatches/overlay/jumpstart/sd-root-root/flash_emmc.sh flash_emmc.sh && ./flash_emmc.sh
 export BOARD_NAME="t95z plus"                              # maybe: "@@BOARD_NAME@@"
 export GOOD_BOOT="t95z_working_uboot.img"                  # maybe: "@@EMMC_KNOWN_GOOD_BOOTLOADER_EMMC@@"
 export THE_EXTLINUXT_MMC="extlinux-emmc-built-kernel.conf" # maybe: "@@CHOSEN_EXTLINUX_EMMC@@"
@@ -100,6 +105,8 @@ display_msg "Done backup u-boot default to file ${UBOOT_BACKUP_FILE}"
 
 display_msg "Start create MBR and partition"
 
+# understand: those numbers are relevant. 1gb space is enough for android recovery, etc, from original firmware
+# to keep working. if we overwrite it too much bad stuff happens... so just waste 1.5gb of our emmc and be safe.
 parted -s "${DEV_EMMC}" mklabel msdos
 parted -s "${DEV_EMMC}" mkpart primary fat32 1000M 1512M
 parted -s "${DEV_EMMC}" mkpart primary ext4 1513M 100%
@@ -109,6 +116,10 @@ display_msg "Start restore u-boot: ${GOOD_BOOT}"
 dd if="${GOOD_UBOOT_EMMC_FILE}" of="${DEV_EMMC}" conv=fsync bs=1 count=442
 dd if="${GOOD_UBOOT_EMMC_FILE}" of="${DEV_EMMC}" conv=fsync bs=512 skip=1 seek=1
 
+sync
+sleep 1
+partprobe "${DEV_EMMC}"
+sleep 1
 sync
 
 display_msg "Done"
@@ -191,24 +202,41 @@ if [[ "$DO_ROOT" == "yes" ]]; then
 
 	display_msg "Restoring rootfs '${EXT4_RESTORE}' to '$PART_ROOT'"
 
-	# xz version, missing e2image
-	#pv ${EXT4_RESTORE} | unxz -T0 - | dd of=$PART_ROOT bs=32M conv=fsync
+	# flash-optimized version
+	#e2image -rc ${EXT4_RESTORE} $PART_ROOT
 
-	# raw version
-	e2image -rc ${EXT4_RESTORE} $PART_ROOT
+	# direct straight to block, wtf
+	# e2image -r ${EXT4_RESTORE} $PART_ROOT
+
+	# direct restore via dd, new dd image
+	display_msg "pv ${EXT4_RESTORE} | dd of=$PART_ROOT bs=1M "
+	pv ${EXT4_RESTORE} | dd of=$PART_ROOT bs=1M
 
 	display_msg "Done restore!"
 
+	display_msg "Sync..." && sync && display_msg "Sync done!"
+	sleep 5
+	display_msg "Partprobe..." && partprobe ${DEV_EMMC} && display_msg "Partprobe done!"
+
 	sync
+
+	display_msg "Sync..." && sync && display_msg "Sync done!"
+	e2fsck -f -y $PART_ROOT
+	sleep 5
+
+	display_msg "Sync..." && sync && display_msg "Sync done!"
+	resize2fs -p $PART_ROOT
+	sleep 5
+
+	display_msg "Sync..." && sync && display_msg "Sync done!"
 	display_msg "Tuning fs parameters..."
 	tune2fs -U 66666666-6666-6666-6666-666666666666 -L ROOT_EMMC $PART_ROOT
-	e2fsck -f -y $PART_ROOT
-	resize2fs -p $PART_ROOT
-	sync
+	sleep 5
 
+	display_msg "Sync..." && sync && display_msg "Sync done!"
 	mount -o rw $PART_ROOT $DIR_INSTALL
 
-	sync
+	display_msg "Sync..." && sync && display_msg "Sync done!"
 
 	display_msg "Installing new fstab to emmc root..."
 

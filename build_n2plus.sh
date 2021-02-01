@@ -19,6 +19,6 @@ sleep 2
 echo "go!"
 
 touch .ignore_changes
-echo calling ./compile.sh rpardini-hc4 CARD_DEVICE=${SD_DEV} $@
-./compile.sh rpardini-hc4 CARD_DEVICE=${SD_DEV} $@
+echo calling ./compile.sh rpardini-n2plus CARD_DEVICE=${SD_DEV} $@
+./compile.sh rpardini-n2plus CARD_DEVICE=${SD_DEV} $@
 

@@ -14,7 +14,9 @@ for dev in /dev/sd?; do
 		echo "not it."
 	fi
 done
-echo "Using device ${dev} for SD card!!"
+echo -n "Using device ${dev} for SD card!!" ...
+sleep 2
+echo "go!"
 
 touch .ignore_changes
 echo calling ./compile.sh rpardini-t95z CARD_DEVICE=${SD_DEV} $@

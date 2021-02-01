@@ -382,7 +382,7 @@ prepare_partitions()
 		BOOTSIZE=0
 	fi
 
-	# call custom function if defined
+	# call custom function if defined, allow custom options for mkfs, etc
 	if [[ "$(type -t prepare_partitions_custom)" == "function" ]]; then
 		display_alert "Invoke function with user override" "prepare_partitions_custom" "info"
 		prepare_partitions_custom
@@ -391,6 +391,13 @@ prepare_partitions()
 	# stage: calculate rootfs size
 	local rootfs_size=$(du -sm $SDCARD/ | cut -f1) # MiB
 	display_alert "Current rootfs size" "$rootfs_size MiB" "info"
+
+	# call custom function if defined, allow dynamically determining the size based on the $rootfs_size
+	if [[ "$(type -t config_prepare_image_size)" == "function" ]]; then
+		display_alert "Invoke function with user override" "config_prepare_image_size" "info"
+		config_prepare_image_size
+	fi
+
 	if [[ -n $FIXED_IMAGE_SIZE && $FIXED_IMAGE_SIZE =~ ^[0-9]+$ ]]; then
 		display_alert "Using user-defined image size" "$FIXED_IMAGE_SIZE MiB" "info"
 		local sdsize=$FIXED_IMAGE_SIZE
