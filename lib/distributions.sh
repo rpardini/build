@@ -472,7 +472,9 @@ install_common()
 		rm -f "${SDCARD}"/usr/lib/NetworkManager/conf.d/10-globally-managed-devices.conf
 
 		# most likely we don't need to wait for nm to get online
-		chroot "${SDCARD}" /bin/bash -c "systemctl disable NetworkManager-wait-online.service" >> "${DEST}"/debug/install.log 2>&1
+		# it is indeed most unlikely; but cloud-init requires the net to be up to be useful.
+		[[ ! -f "${SDCARD}"/usr/bin/cloud-init ]] && \
+			chroot "${SDCARD}" /bin/bash -c "systemctl disable NetworkManager-wait-online.service" >> "${DEST}"/debug/install.log 2>&1
 
 		# Just regular DNS and maintain /etc/resolv.conf as a file
 		sed "/dns/d" -i "${SDCARD}"/etc/NetworkManager/NetworkManager.conf
@@ -664,5 +666,8 @@ post_debootstrap_tweaks()
 	chroot "${SDCARD}" /bin/bash -c "dpkg-divert --quiet --local --rename --remove /sbin/initctl"
 	chroot "${SDCARD}" /bin/bash -c "dpkg-divert --quiet --local --rename --remove /sbin/start-stop-daemon"
 	rm -f "${SDCARD}"/usr/sbin/policy-rc.d "${SDCARD}/usr/bin/${QEMU_BINARY}"
+
+	# delegate back to config
+	[[ $(type -t config_post_debootstrap_tweaks) == function ]] && config_post_debootstrap_tweaks
 
 }
