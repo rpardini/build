@@ -109,6 +109,9 @@ fi
 # load architecture defaults
 source "${SRC}/config/sources/${ARCH}.conf"
 
+# give the config a chance to override the family/arch defaults
+[[ $(type -t config_tweaks_post_family_config) == function ]] && config_tweaks_post_family_config
+
 # Myy : Menu configuration for choosing desktop configurations
 
 show_menu() {

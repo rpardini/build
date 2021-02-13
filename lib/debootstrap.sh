@@ -218,8 +218,10 @@ create_rootfs_cache()
 		# stage: create apt-get sources list
 		create_sources_list "$RELEASE" "$SDCARD/"
 
-		# add armhf arhitecture to arm64
-		[[ $ARCH == arm64 ]] && eval 'LC_ALL=C LANG=C chroot $SDCARD /bin/bash -c "dpkg --add-architecture armhf"'
+		# add armhf arhitecture to arm64, unless configured not to do so.
+		if [[ "a${ARMHF_ARCH}" != "askip" ]]; then
+			[[ $ARCH == arm64 ]] && eval 'LC_ALL=C LANG=C chroot $SDCARD /bin/bash -c "dpkg --add-architecture armhf"'
+		fi
 
 		# this should fix resolvconf installation failure in some cases
 		chroot $SDCARD /bin/bash -c 'echo "resolvconf resolvconf/linkify-resolvconf boolean false" | debconf-set-selections'
@@ -423,7 +425,7 @@ prepare_partitions()
 	# mountopts[nfs] is empty
 
 	# default BOOTSIZE to use if not specified
-	DEFAULT_BOOTSIZE=256	# MiB
+	DEFAULT_BOOTSIZE=256 # MiB
 
 	# stage: determine partition configuration
 	if [[ -n $BOOTFS_TYPE ]]; then
@@ -455,9 +457,28 @@ prepare_partitions()
 		BOOTSIZE=0
 	fi
 
+	# call custom function if defined, allow custom options for mkfs, etc
+	if [[ "$(type -t prepare_partitions_custom)" == "function" ]]; then
+		display_alert "Invoke function with user override" "prepare_partitions_custom" "info"
+		prepare_partitions_custom
+	fi
+
+	# call custom function if defined
+	if [[ "$(type -t prepare_partitions_custom)" == "function" ]]; then
+		display_alert "Invoke function with user override" "prepare_partitions_custom" "info"
+		prepare_partitions_custom
+	fi
+
 	# stage: calculate rootfs size
 	local rootfs_size=$(du -sm $SDCARD/ | cut -f1) # MiB
 	display_alert "Current rootfs size" "$rootfs_size MiB" "info"
+
+	# call custom function if defined, allow dynamically determining the size based on the $rootfs_size
+	if [[ "$(type -t config_prepare_image_size)" == "function" ]]; then
+		display_alert "Invoke function with user override" "config_prepare_image_size" "info"
+		config_prepare_image_size
+	fi
+
 	if [[ -n $FIXED_IMAGE_SIZE && $FIXED_IMAGE_SIZE =~ ^[0-9]+$ ]]; then
 		display_alert "Using user-defined image size" "$FIXED_IMAGE_SIZE MiB" "info"
 		local sdsize=$FIXED_IMAGE_SIZE
@@ -495,7 +516,7 @@ prepare_partitions()
 		truncate --size=${sdsize}M ${SDCARD}.raw # sometimes results in fs corruption, revert to previous know to work solution
 		sync
 	else
-		dd if=/dev/zero bs=1M status=none count=$sdsize | pv -p -b -r -s $(( $sdsize * 1024 * 1024 )) -N "[ .... ] dd" | dd status=none of=${SDCARD}.raw
+		dd if=/dev/zero bs=1M status=none count=$sdsize | pv -p -b -r -s $(($sdsize * 1024 * 1024)) -N "[ .... ] dd" | dd status=none of=${SDCARD}.raw
 	fi
 
 	# stage: calculate boot partition size
@@ -702,11 +723,17 @@ create_image()
 	# fix wrong / permissions
 	chmod 755 $MOUNT
 
+	# allow config to hack into the image before the unmount...
+	[[ $(type -t config_pre_umount_final_image) == function ]] && config_pre_umount_final_image
+
 	# unmount /boot first, rootfs second, image file last
 	sync
 	[[ $BOOTSIZE != 0 ]] && umount -l $MOUNT/boot
 	[[ $ROOTFS_TYPE != nfs ]] && umount -l $MOUNT
 	[[ $CRYPTROOT_ENABLE == yes ]] && cryptsetup luksClose $ROOT_MAPPER
+
+	# allow config to hack into the image after the unmount...
+	[[ $(type -t config_post_umount_final_image) == function ]] && config_post_umount_final_image
 
 	# to make sure its unmounted
 	while grep -Eq '(${MOUNT}|${DESTIMG})' /proc/mounts
