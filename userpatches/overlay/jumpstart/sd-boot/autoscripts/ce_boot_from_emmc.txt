@@ -1,0 +1,39 @@
+echo "*** *** this is ce_boot_from_mmc starting *** *** "
+
+echo "*** ***  mmcinfo *** *** "
+mmcinfo
+
+echo "*** ***  some infos maybe *** *** "
+echo "*** ***  some infos maybe: dtb_mem_addr: ${dtb_mem_addr} *** *** "
+echo "*** ***  some infos maybe: loadaddr: ${loadaddr} *** *** "
+echo "*** ***  some infos maybe: bootfromnand: ${bootfromnand} *** *** "
+echo "*** ***  some infos maybe: bootfromsd: ${bootfromsd} *** *** "
+echo "*** ***  some infos maybe: bootargs: ${bootargs} *** *** "
+echo "*** ***  some infos maybe DONE *** *** "
+
+echo "*** ***  printenv *** *** "
+printenv
+
+echo "*** ***  sleep 5 *** *** "
+sleep 5
+
+echo "*** ***  defenv *** *** "
+defenv
+
+echo "*** ***  printenv after defenv *** *** "
+printenv
+
+echo "*** ***  sleep 5 *** *** "
+sleep 5
+
+echo "*** *** trying: yyyy *** *** "
+# probably should be all one line
+if fatload mmc 1 0x1080000 kernel.img; then
+  if fatload mmc 1 0x1000000 dtb.img; then
+   echo "*** ***  loaded DTB OK! *** *** ";
+  fi;
+  echo "GOING to bootm 0x1080000 NOW...";
+  bootm 0x1080000;
+fi;
+
+echo "*** *** done nothing else to try *** *** "

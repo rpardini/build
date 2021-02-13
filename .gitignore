@@ -15,10 +15,10 @@ ubuntu-*-cloudimg-console.log
 /.tmp/
 /output/
 /cache/
-/*userpatches*/
-/userpatches
+!/userpatches/config-rpardini-hc4.conf
 
 ### General annoyances ###
 .DS_Store
 *~
 *.swp
+.idea
