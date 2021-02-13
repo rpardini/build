@@ -355,16 +355,13 @@ fi
 #shellcheck source=configuration.sh
 source "${SRC}"/lib/configuration.sh
 
-# optimize build time with 100% CPU usage
-CPUS=$(grep -c 'processor' /proc/cpuinfo)
+# optimize build time with close to 100% CPU usage -- keep one hyperthread or core free
+# on hyperthreaded systems, nproc counts hyperthreads, not cores. so maybe not ideal on non HT-systems
+# or when running on VMs whose hypervisors lie about topology.
 if [[ $USEALLCORES != no ]]; then
-
-	CTHREADS="-j$((CPUS + CPUS/2))"
-
+	CTHREADS="-j$(nproc --ignore=1)"
 else
-
 	CTHREADS="-j1"
-
 fi
 
 if [[ $BETA == yes ]]; then
