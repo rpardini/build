@@ -178,7 +178,9 @@ create_sources_list()
 	elif [[ $DOWNLOAD_MIRROR == "bfsu" ]]; then
 	    echo "deb http://mirrors.bfsu.edu.cn/armbian $RELEASE main ${RELEASE}-utils ${RELEASE}-desktop" > "${SDCARD}"/etc/apt/sources.list.d/armbian.list
 	else
-		echo "deb http://"$([[ $BETA == yes ]] && echo "beta" || echo "apt" )".armbian.com $RELEASE main ${RELEASE}-utils ${RELEASE}-desktop" > "${SDCARD}"/etc/apt/sources.list.d/armbian.list
+		local ARMBIAN_APT_MIRROR_DEFAULT="http://"$([[ $BETA == yes ]] && echo "beta" || echo "apt" )".armbian.com"
+		[[ "a$ARMBIAN_APT_MIRROR" == "a" ]] && ARMBIAN_APT_MIRROR="${ARMBIAN_APT_MIRROR_DEFAULT}"
+		echo "deb $ARMBIAN_APT_MIRROR $RELEASE main ${RELEASE}-utils ${RELEASE}-desktop" > "${SDCARD}"/etc/apt/sources.list.d/armbian.list
 	fi
 
 	# replace local package server if defined. Suitable for development
@@ -235,7 +237,7 @@ fetch_from_repo()
 	local ref_subdir=$4
 
 	# The 'offline' variable must always be set to 'true' or 'false'
-	if [ "$OFFLINE_WORK" == "yes" ]; then
+	if [ "$OFFLINE_WORK" == "yes" ] || [ "$OFFLINE_WORK_GIT" == "yes" ]; then
 		local offline=true
 	else
 		local offline=false
