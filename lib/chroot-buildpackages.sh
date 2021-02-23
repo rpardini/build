@@ -33,6 +33,7 @@ create_chroot()
 	apt_mirror['bionic']="$UBUNTU_MIRROR"
 	apt_mirror['focal']="$UBUNTU_MIRROR"
 	apt_mirror['groovy']="$UBUNTU_MIRROR"
+	apt_mirror['hirsute']="$UBUNTU_MIRROR"
 	components['stretch']='main,contrib'
 	components['buster']='main,contrib'
 	components['bullseye']='main,contrib'
@@ -40,10 +41,11 @@ create_chroot()
 	components['bionic']='main,universe,multiverse'
 	components['focal']='main,universe,multiverse'
 	components['groovy']='main,universe,multiverse'
+	components['hirsute']='main,universe,multiverse'
 	display_alert "Creating build chroot" "$release/$arch" "info"
 	local includes="ccache,locales,git,ca-certificates,devscripts,libfile-fcntllock-perl,debhelper,rsync,python3,distcc"
 	# perhaps a temporally workaround
-	[[ $release == buster || $release == bullseye || $release == focal || $release == groovy ]] && includes=${includes}",perl-openssl-defaults,libnet-ssleay-perl"
+	[[ $release == buster || $release == bullseye || $release == focal || $release == groovy || $release == hirsute ]] && includes=${includes}",perl-openssl-defaults,libnet-ssleay-perl"
 	if [[ $NO_APT_CACHER != yes ]]; then
 		local mirror_addr="http://localhost:3142/${apt_mirror[${release}]}"
 	else
@@ -132,7 +134,7 @@ chroot_build_packages()
 		target_arch="${ARCH}"
 	else
 		# only make packages for recent releases. There are no changes on older
-		target_release="stretch bionic buster bullseye groovy focal"
+		target_release="stretch bionic buster bullseye groovy focal hirsute"
 		target_arch="armhf arm64"
 	fi
 

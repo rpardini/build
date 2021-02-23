@@ -297,6 +297,8 @@ distro_name['focal']="Ubuntu Focal 20.04 LTS"
 distro_support['focal']="supported"
 distro_name['groovy']="Ubuntu Groovy 20.10"
 distro_support['groovy']="csc"
+distro_name['hirsute']="Ubuntu Hirsute 21.04"
+distro_support['hirsute']="csc"
 
 if [[ $KERNEL_ONLY != yes && -z $RELEASE ]]; then
 
@@ -307,6 +309,7 @@ if [[ $KERNEL_ONLY != yes && -z $RELEASE ]]; then
 		distro_menu "bionic"
 		distro_menu "bullseye"
 		distro_menu "groovy"
+		distro_menu "hirsute"
 		distro_menu "stretch"
 		distro_menu "xenial"
 
