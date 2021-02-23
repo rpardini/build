@@ -153,7 +153,6 @@ create_rootfs_cache()
 		# fancy progress bars
 		[[ -z $OUTPUT_DIALOG ]] && local apt_extra_progress="--show-progress -o DPKG::Progress-Fancy=1"
 
-		set -x
 		display_alert "Installing base system" "Stage 1/2" "info"
 		eval 'debootstrap --variant=minbase --include=${DEBOOTSTRAP_LIST// /,} ${PACKAGE_LIST_EXCLUDE:+ --exclude=${PACKAGE_LIST_EXCLUDE// /,}} \
 			--arch=$ARCH --components=${DEBOOTSTRAP_COMPONENTS} --foreign $RELEASE $SDCARD/ $apt_mirror' \
