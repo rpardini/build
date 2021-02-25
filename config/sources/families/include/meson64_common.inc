@@ -20,7 +20,7 @@ CPUMAX=1536000
 GOVERNOR=conservative
 
 case $BRANCH in
-	
+
 	legacy)
 		KERNELSOURCE='https://github.com/hardkernel/linux'
 		KERNELBRANCH='branch:odroidg12-4.9.y'
@@ -28,7 +28,7 @@ case $BRANCH in
 	;;
 
         current)
-                KERNELBRANCH='branch:linux-5.10.y'
+                KERNELBRANCH='tag:v5.10.7'
                 KERNELPATCHDIR='meson64-current'
         ;;
 
