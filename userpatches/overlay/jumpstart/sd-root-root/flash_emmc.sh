@@ -203,14 +203,14 @@ if [[ "$DO_ROOT" == "yes" ]]; then
 	display_msg "Restoring rootfs '${EXT4_RESTORE}' to '$PART_ROOT'"
 
 	# flash-optimized version
-	#e2image -rc ${EXT4_RESTORE} $PART_ROOT
+	e2image -racp ${EXT4_RESTORE} $PART_ROOT
 
 	# direct straight to block, wtf
 	# e2image -r ${EXT4_RESTORE} $PART_ROOT
 
 	# direct restore via dd, new dd image
-	display_msg "pv ${EXT4_RESTORE} | dd of=$PART_ROOT bs=1M "
-	pv ${EXT4_RESTORE} | dd of=$PART_ROOT bs=1M
+	#display_msg "pv ${EXT4_RESTORE} | dd of=$PART_ROOT bs=1M "
+	#pv ${EXT4_RESTORE} | dd of=$PART_ROOT bs=1M
 
 	display_msg "Done restore!"
 
