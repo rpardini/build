@@ -27,10 +27,10 @@ case $BRANCH in
 		KERNELDIR='linux-odroid'
 	;;
 
-        current)
-                KERNELBRANCH='tag:v5.10.7'
-                KERNELPATCHDIR='meson64-current'
-        ;;
+	current)
+		KERNELBRANCH='branch:linux-5.10.y'
+		KERNELPATCHDIR='meson64-current'
+	;;
 
         dev)
 		KERNELBRANCH='branch:linux-5.11.y'
@@ -216,7 +216,7 @@ family_tweaks_bsp()
 	install -m 755 $SRC/packages/bsp/rockchip/hdmi-hotplug $destination/usr/local/bin
 
 	mkdir -p "$destination"/etc/X11/xorg.conf.d
-	if [[ $BOARD == odroidc2 || $BOARD == nanopik2 || $BOARD == lepatato || $BOARD == lafrite || $BOARD == vim1 ]]; then 
+	if [[ $BOARD == odroidc2 || $BOARD == nanopik2 || $BOARD == lepatato || $BOARD == lafrite || $BOARD == vim1 ]]; then
 
 	cat <<-EOF > "$destination"/etc/X11/xorg.conf.d/02-driver.conf
 	# set fbdev as default driver.
@@ -231,11 +231,11 @@ family_tweaks_bsp()
 	cat <<-EOF > "$destination"/etc/X11/xorg.conf
 	Section "Device"
 	    Identifier  "Armsoc Graphics"
-	    
+
 	    ## Use armsoc driver
 	    #   Driver          "armsoc"
 	    ## End armsoc configuration
-	    
+
 	    ## Use modesetting and glamor
 	        Driver      "modesetting"
 	        Option      "AccelMethod"    "glamor"     ### "glamor" to enable 3D acceleration, "none" to disable.
@@ -243,9 +243,9 @@ family_tweaks_bsp()
 	        Option      "Dri2Vsync"      "true"
 	        Option      "TripleBuffer"   "True"
 	    ## End glamor configuration
-	    
+
 	    EndSection
-       
+
 	    Section "Screen"
 	        Identifier "Default Screen"
 	            SubSection "Display"
