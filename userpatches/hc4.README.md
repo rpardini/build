@@ -1,3 +1,5 @@
+YES 
+
 # Hardkernel ODROID HC4
 
 ## On paper

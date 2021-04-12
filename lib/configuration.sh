@@ -12,14 +12,14 @@
 # common options
 # daily beta build contains date in subrevision
 #if [[ $BETA == yes && -z $SUBREVISION ]]; then SUBREVISION="."$(date --date="tomorrow" +"%j"); fi
-REVISION=$(cat "${SRC}"/VERSION)"$SUBREVISION" # all boards have same revision
-[[ -z $ROOTPWD ]] && ROOTPWD="1234" # Must be changed @first login
-[[ -z $MAINTAINER ]] && MAINTAINER="Igor Pecovnik" # deb signature
+REVISION=$(cat "${SRC}"/VERSION)"$SUBREVISION"                       # all boards have same revision
+[[ -z $ROOTPWD ]] && ROOTPWD="1234"                                  # Must be changed @first login
+[[ -z $MAINTAINER ]] && MAINTAINER="Igor Pecovnik"                   # deb signature
 [[ -z $MAINTAINERMAIL ]] && MAINTAINERMAIL="igor.pecovnik@****l.com" # deb signature
-TZDATA=$(cat /etc/timezone) # Timezone for target is taken from host or defined here.
-USEALLCORES=yes # Use all CPU cores for compiling
-[[ -z $EXIT_PATCHING_ERROR ]] && EXIT_PATCHING_ERROR="" # exit patching if failed
-[[ -z $HOST ]] && HOST="$BOARD" # set hostname to the board
+TZDATA=$(cat /etc/timezone)                                          # Timezone for target is taken from host or defined here.
+USEALLCORES=yes                                                      # Use all CPU cores for compiling
+[[ -z $EXIT_PATCHING_ERROR ]] && EXIT_PATCHING_ERROR=""              # exit patching if failed
+[[ -z $HOST ]] && HOST="$BOARD"                                      # set hostname to the board
 cd "${SRC}" || exit
 ROOTFSCACHE_VERSION=4
 CHROOT_CACHE_VERSION=7
@@ -62,10 +62,10 @@ fi
 # used by multiple sources - reduce code duplication
 [[ $USE_MAINLINE_GOOGLE_MIRROR == yes ]] && MAINLINE_MIRROR=google
 case $MAINLINE_MIRROR in
-	google) MAINLINE_KERNEL_SOURCE='https://kernel.googlesource.com/pub/scm/linux/kernel/git/stable/linux-stable' ;;
-	tuna) MAINLINE_KERNEL_SOURCE='https://mirrors.tuna.tsinghua.edu.cn/git/linux-stable.git' ;;
-	bfsu) MAINLINE_KERNEL_SOURCE='https://mirrors.bfsu.edu.cn/git/linux-stable.git' ;;
-	*) MAINLINE_KERNEL_SOURCE='git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-stable.git' ;;
+google) MAINLINE_KERNEL_SOURCE='https://kernel.googlesource.com/pub/scm/linux/kernel/git/stable/linux-stable' ;;
+tuna) MAINLINE_KERNEL_SOURCE='https://mirrors.tuna.tsinghua.edu.cn/git/linux-stable.git' ;;
+bfsu) MAINLINE_KERNEL_SOURCE='https://mirrors.bfsu.edu.cn/git/linux-stable.git' ;;
+*) MAINLINE_KERNEL_SOURCE='git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-stable.git' ;;
 esac
 MAINLINE_KERNEL_DIR='linux-mainline'
 
@@ -96,7 +96,7 @@ ATF_COMPILE=yes
 
 # single ext4 partition is the default and preferred configuration
 #BOOTFS_TYPE=''
-[[ ! -f ${SRC}/config/sources/families/$LINUXFAMILY.conf ]] && \
+[[ ! -f ${SRC}/config/sources/families/$LINUXFAMILY.conf ]] &&
 	exit_with_error "Sources configuration not found" "$LINUXFAMILY"
 
 source "${SRC}/config/sources/families/${LINUXFAMILY}.conf"
@@ -125,7 +125,7 @@ show_menu() {
 	#echo "Provided options : " "${@:4}"
 	#echo "TTY X: $TTY_X Y: $TTY_Y"
 	dialog --stdout --title "$provided_title" --backtitle "${provided_backtitle}" \
-	--menu "$provided_menuname" $TTY_Y $TTY_X $((TTY_Y - 8)) "${@:4}"
+		--menu "$provided_menuname" $TTY_Y $TTY_X $((TTY_Y - 8)) "${@:4}"
 }
 
 # Myy : FIXME Factorize
@@ -134,7 +134,7 @@ show_select_menu() {
 	provided_backtitle=$2
 	provided_menuname=$3
 	dialog --stdout --title "${provided_title}" --backtitle "${provided_backtitle}" \
-	--checklist "${provided_menuname}" $TTY_Y $TTY_X $((TTY_Y - 8)) "${@:4}"
+		--checklist "${provided_menuname}" $TTY_Y $TTY_X $((TTY_Y - 8)) "${@:4}"
 }
 
 # Myy : Once we got a list of selected groups, parse the PACKAGE_LIST inside configuration.sh
@@ -150,7 +150,7 @@ desktop_element_available_for_arch() {
 
 	local arch_limitation_file="${1}/only_for"
 
-	echo "Checking if ${desktop_element_path} is available for ${targeted_arch} in ${arch_limitation_file}" >> "${DEST}"/debug/output.log
+	echo "Checking if ${desktop_element_path} is available for ${targeted_arch} in ${arch_limitation_file}" >>"${DEST}"/debug/output.log
 	if [[ -f "${arch_limitation_file}" ]]; then
 		grep -- "${targeted_arch}" "${arch_limitation_file}"
 		return $?
@@ -188,7 +188,7 @@ if [[ $BUILD_DESKTOP == "yes" && -z $DESKTOP_ENVIRONMENT ]]; then
 		for desktop_env_dir in "${DESKTOP_CONFIGS_DIR}/"*; do
 			local desktop_env_name=$(basename ${desktop_env_dir})
 			local expert_infos=""
-			[[ "${EXPERT}" == "yes" ]] && expert_infos="[$(cat "${desktop_env_dir}/support" 2> /dev/null)]"
+			[[ "${EXPERT}" == "yes" ]] && expert_infos="[$(cat "${desktop_env_dir}/support" 2>/dev/null)]"
 			desktop_element_supported "${desktop_env_dir}" "${ARCH}" && options+=("${desktop_env_name}" "${desktop_env_name^} desktop environment ${expert_infos}")
 		done
 	}
@@ -281,12 +281,13 @@ if [[ $BUILD_DESKTOP == "yes" && -z ${DESKTOP_APPGROUPS_SELECTED+x} ]]; then
 		options+=("${appgroup}" "${appgroup^}" off)
 	done
 
-	DESKTOP_APPGROUPS_SELECTED=$(\
+	DESKTOP_APPGROUPS_SELECTED=$(
 		show_select_menu \
-		"Choose desktop softwares to add" \
-		"$backtitle" \
-		"Select which kind of softwares you'd like to add to your build" \
-		"${options[@]}")
+			"Choose desktop softwares to add" \
+			"$backtitle" \
+			"Select which kind of softwares you'd like to add to your build" \
+			"${options[@]}"
+	)
 
 	unset options
 fi
@@ -300,14 +301,14 @@ fi
 # Write to variables :
 # - aggregated_content
 aggregate_content() {
-	echo -e "Potential paths : ${potential_paths}\n" >> "${DEST}"/debug/output.log
+	echo -e "Potential paths : ${potential_paths}\n" >>"${DEST}"/debug/output.log
 	for filepath in ${potential_paths}; do
 		if [[ -f "${filepath}" ]]; then
-			echo -e "${filepath/"$SRC"\//} yes\n" >> "${DEST}"/debug/output.log
+			echo -e "${filepath/"$SRC"\//} yes\n" >>"${DEST}"/debug/output.log
 			aggregated_content+=$(cat "${filepath}")
 			aggregated_content+="${separator}"
 		else
-			echo -e "${filepath/"$SRC"\//} no\n" >> "${DEST}"/debug/output.log
+			echo -e "${filepath/"$SRC"\//} no\n" >>"${DEST}"/debug/output.log
 		fi
 
 	done
@@ -337,9 +338,9 @@ BOOTCONFIG_VAR_NAME=BOOTCONFIG_${BRANCH^^}
 [[ -z $KERNELPATCHDIR ]] && KERNELPATCHDIR="$LINUXFAMILY-$BRANCH"
 
 if [[ "$RELEASE" =~ ^(xenial|bionic|focal|groovy|hirsute)$ ]]; then
-		DISTRIBUTION="Ubuntu"
-	else
-		DISTRIBUTION="Debian"
+	DISTRIBUTION="Ubuntu"
+else
+	DISTRIBUTION="Debian"
 fi
 
 CLI_CONFIG_PATH="${SRC}/config/cli/${RELEASE}"
@@ -469,10 +470,15 @@ DEBOOTSTRAP_COMPONENTS="${DEBOOTSTRAP_COMPONENTS// /,}"
 PACKAGE_LIST="$(one_line aggregate_all_cli "packages" " ")"
 PACKAGE_LIST_ADDITIONAL="$(one_line aggregate_all_cli "packages.additional" " ")"
 
-echo "DEBOOTSTRAP LIST : ${DEBOOTSTRAP_LIST}" >> "${DEST}"/debug/output.log
-echo "DEBOOTSTRAP_COMPONENTS : ${DEBOOTSTRAP_COMPONENTS}" >> "${DEST}"/debug/output.log
-echo "CLI PACKAGE_LIST : ${PACKAGE_LIST}" >> "${DEST}"/debug/output.log
-echo "CLI PACKAGE_LIST_ADDITIONAL : ${PACKAGE_LIST_ADDITIONAL}" >> "${DEST}"/debug/output.log
+if [[ "$(type -t user_config)" == "function" ]]; then
+	display_alert "Invoke function with user override" "user_config" "info"
+	user_config
+fi
+
+echo "DEBOOTSTRAP LIST : ${DEBOOTSTRAP_LIST}" >>"${DEST}"/debug/output.log
+echo "DEBOOTSTRAP_COMPONENTS : ${DEBOOTSTRAP_COMPONENTS}" >>"${DEST}"/debug/output.log
+echo "CLI PACKAGE_LIST : ${PACKAGE_LIST}" >>"${DEST}"/debug/output.log
+echo "CLI PACKAGE_LIST_ADDITIONAL : ${PACKAGE_LIST_ADDITIONAL}" >>"${DEST}"/debug/output.log
 
 # Dependent desktop packages
 # Myy : Sources packages from file here
@@ -480,28 +486,28 @@ echo "CLI PACKAGE_LIST_ADDITIONAL : ${PACKAGE_LIST_ADDITIONAL}" >> "${DEST}"/deb
 # Myy : FIXME Rename aggregate_all to aggregate_all_desktop
 if [[ $BUILD_DESKTOP == "yes" ]]; then
 	PACKAGE_LIST_DESKTOP+="$(one_line aggregate_all_desktop "packages" " ")"
-	echo "Groups selected ${DESKTOP_APPGROUPS_SELECTED} -> PACKAGES : ${PACKAGE_LIST_DESKTOP}" >> "${DEST}"/debug/output.log
+	echo "Groups selected ${DESKTOP_APPGROUPS_SELECTED} -> PACKAGES : ${PACKAGE_LIST_DESKTOP}" >>"${DEST}"/debug/output.log
 fi
 
-display_alert "Deboostrap" >> "${DEST}"/debug/output.log
-display_alert "Components ${DEBOOTSTRAP_COMPONENTS}" >> "${DEST}"/debug/output.log
-display_alert "Packages ${DEBOOTSTRAP_LIST}" >> "${DEST}"/debug/output.log
-display_alert "----" >> "${DEST}"/debug/output.log
-display_alert "CLI packages" >> "${DEST}"/debug/output.log
-display_alert "Standard : ${PACKAGE_LIST}" >> "${DEST}"/debug/output.log
-display_alert "Additional : ${PACKAGE_LIST_ADDITIONAL}" >> "${DEST}"/debug/output.log
+display_alert "Deboostrap" >>"${DEST}"/debug/output.log
+display_alert "Components ${DEBOOTSTRAP_COMPONENTS}" >>"${DEST}"/debug/output.log
+display_alert "Packages ${DEBOOTSTRAP_LIST}" >>"${DEST}"/debug/output.log
+display_alert "----" >>"${DEST}"/debug/output.log
+display_alert "CLI packages" >>"${DEST}"/debug/output.log
+display_alert "Standard : ${PACKAGE_LIST}" >>"${DEST}"/debug/output.log
+display_alert "Additional : ${PACKAGE_LIST_ADDITIONAL}" >>"${DEST}"/debug/output.log
 
 DEBIAN_MIRROR='deb.debian.org/debian'
 DEBIAN_SECURTY='security.debian.org/'
 UBUNTU_MIRROR='ports.ubuntu.com/'
 
-if [[ $DOWNLOAD_MIRROR == "china" ]] ; then
+if [[ $DOWNLOAD_MIRROR == "china" ]]; then
 	DEBIAN_MIRROR='mirrors.tuna.tsinghua.edu.cn/debian'
 	DEBIAN_SECURTY='mirrors.tuna.tsinghua.edu.cn/debian-security'
 	UBUNTU_MIRROR='mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/'
 fi
 
-if [[ $DOWNLOAD_MIRROR == "bfsu" ]] ; then
+if [[ $DOWNLOAD_MIRROR == "bfsu" ]]; then
 	DEBIAN_MIRROR='mirrors.bfsu.edu.cn/debian'
 	DEBIAN_SECURTY='mirrors.bfsu.edu.cn/debian-security'
 	UBUNTU_MIRROR='mirrors.bfsu.edu.cn/ubuntu-ports/'
@@ -519,11 +525,6 @@ done
 if [[ -f $USERPATCHES_PATH/lib.config ]]; then
 	display_alert "Using user configuration override" "$USERPATCHES_PATH/lib.config" "info"
 	source "$USERPATCHES_PATH"/lib.config
-fi
-
-if [[ "$(type -t user_config)" == "function" ]]; then
-	display_alert "Invoke function with user override" "user_config" "info"
-	user_config
 fi
 
 # apt-cacher-ng mirror configurarion
@@ -555,23 +556,28 @@ aggregate_all_desktop "packages.uninstall" " "
 PACKAGE_LIST_UNINSTALL="$(cleanup_list aggregated_content)"
 unset aggregated_content
 
-display_alert "PACKAGE_MAIN_LIST : ${PACKAGE_MAIN_LIST}" >> "${DEST}"/debug/output.log
-display_alert "PACKAGE_LIST : ${PACKAGE_LIST}" >> "${DEST}"/debug/output.log
-display_alert "PACKAGE_LIST_RM : ${PACKAGE_LIST_RM}" >> "${DEST}"/debug/output.log
-display_alert "PACKAGE_LIST_UNINSTALL : ${PACKAGE_LIST_UNINSTALL}" >> "${DEST}"/debug/output.log
+display_alert "PACKAGE_MAIN_LIST : ${PACKAGE_MAIN_LIST}"
+display_alert "PACKAGE_LIST : ${PACKAGE_LIST}"
+display_alert "PACKAGE_LIST_RM : ${PACKAGE_LIST_RM}"
+display_alert "PACKAGE_LIST_UNINSTALL : ${PACKAGE_LIST_UNINSTALL}"
+
+display_alert "PACKAGE_MAIN_LIST : ${PACKAGE_MAIN_LIST}" >>"${DEST}"/debug/output.log
+display_alert "PACKAGE_LIST : ${PACKAGE_LIST}" >>"${DEST}"/debug/output.log
+display_alert "PACKAGE_LIST_RM : ${PACKAGE_LIST_RM}" >>"${DEST}"/debug/output.log
+display_alert "PACKAGE_LIST_UNINSTALL : ${PACKAGE_LIST_UNINSTALL}" >>"${DEST}"/debug/output.log
 
 if [[ -n $PACKAGE_LIST_RM ]]; then
-	display_alert "Remove filter : $(tr ' ' '|' <<< ${PACKAGE_LIST_RM})"
+	display_alert "Remove filter : $(tr ' ' '|' <<<${PACKAGE_LIST_RM})"
 	# Turns out that \b can be tricked by dashes.
 	# So if you remove mesa-utils but still want to install "mesa-utils-extra"
 	# a "\b(mesa-utils)\b" filter will convert "mesa-utils-extra" to "-extra".
 	# \W is not tricked by this but consumes the surrounding spaces, so we
 	# replace the occurence by one space, to avoid sticking the next word to
 	# the previous one after consuming the spaces.
-	PACKAGE_LIST=$(sed -r "s/\W($(tr ' ' '|' <<< ${PACKAGE_LIST_RM}))\W/ /g" <<< " ${PACKAGE_LIST} ")
-	PACKAGE_MAIN_LIST=$(sed -r "s/\W($(tr ' ' '|' <<< ${PACKAGE_LIST_RM}))\W/ /g" <<< " ${PACKAGE_MAIN_LIST} ")
+	PACKAGE_LIST=$(sed -r "s/\W($(tr ' ' '|' <<<${PACKAGE_LIST_RM}))\W/ /g" <<<" ${PACKAGE_LIST} ")
+	PACKAGE_MAIN_LIST=$(sed -r "s/\W($(tr ' ' '|' <<<${PACKAGE_LIST_RM}))\W/ /g" <<<" ${PACKAGE_MAIN_LIST} ")
 	if [[ $BUILD_DESKTOP == "yes" ]]; then
-		PACKAGE_LIST_DESKTOP=$(sed -r "s/\W($(tr ' ' '|' <<< ${PACKAGE_LIST_RM}))\W/ /g" <<< " ${PACKAGE_LIST_DESKTOP} ")
+		PACKAGE_LIST_DESKTOP=$(sed -r "s/\W($(tr ' ' '|' <<<${PACKAGE_LIST_RM}))\W/ /g" <<<" ${PACKAGE_LIST_DESKTOP} ")
 		# Removing double spaces... AGAIN, since we might have used a sed on them
 		# Do not quote the variables. This would defeat the trick.
 		PACKAGE_LIST_DESKTOP="$(echo ${PACKAGE_LIST_DESKTOP})"
@@ -583,62 +589,62 @@ if [[ -n $PACKAGE_LIST_RM ]]; then
 	PACKAGE_MAIN_LIST="$(echo ${PACKAGE_MAIN_LIST})"
 fi
 
-display_alert "After removal of packages.remove packages" >> "${DEST}"/debug/output.log
-display_alert "PACKAGE_MAIN_LIST : \"${PACKAGE_MAIN_LIST}\"" >> "${DEST}"/debug/output.log
-display_alert "PACKAGE_LIST : \"${PACKAGE_LIST}\"" >> "${DEST}"/debug/output.log
+display_alert "After removal of packages.remove packages" >>"${DEST}"/debug/output.log
+display_alert "PACKAGE_MAIN_LIST : \"${PACKAGE_MAIN_LIST}\"" >>"${DEST}"/debug/output.log
+display_alert "PACKAGE_LIST : \"${PACKAGE_LIST}\"" >>"${DEST}"/debug/output.log
 
 # Give the option to configure DNS server used in the chroot during the build process
 [[ -z $NAMESERVER ]] && NAMESERVER="1.0.0.1" # default is cloudflare alternate
 
 # debug
-cat <<-EOF >> "${DEST}"/debug/output.log
+cat <<-EOF >>"${DEST}"/debug/output.log
 
-## BUILD SCRIPT ENVIRONMENT
+	## BUILD SCRIPT ENVIRONMENT
 
-Repository: $REPOSITORY_URL
-Version: $REPOSITORY_COMMIT
+	Repository: $REPOSITORY_URL
+	Version: $REPOSITORY_COMMIT
 
-Host OS: $(lsb_release -sc)
-Host arch: $(dpkg --print-architecture)
-Host system: $(uname -a)
-Virtualization type: $(systemd-detect-virt)
+	Host OS: $(lsb_release -sc)
+	Host arch: $(dpkg --print-architecture)
+	Host system: $(uname -a)
+	Virtualization type: $(systemd-detect-virt)
 
-## Build script directories
-Build directory is located on:
-$(findmnt -o TARGET,SOURCE,FSTYPE,AVAIL -T "${SRC}")
+	## Build script directories
+	Build directory is located on:
+	$(findmnt -o TARGET,SOURCE,FSTYPE,AVAIL -T "${SRC}")
 
-Build directory permissions:
-$(getfacl -p "${SRC}")
+	Build directory permissions:
+	$(getfacl -p "${SRC}")
 
-Temp directory permissions:
-$(getfacl -p "${SRC}"/.tmp 2> /dev/null)
+	Temp directory permissions:
+	$(getfacl -p "${SRC}"/.tmp 2>/dev/null)
 
-## BUILD CONFIGURATION
+	## BUILD CONFIGURATION
 
-Build target:
-Board: $BOARD
-Branch: $BRANCH
-Minimal: $BUILD_MINIMAL
-Desktop: $BUILD_DESKTOP
-Desktop Environment: $DESKTOP_ENVIRONMENT
-Software groups: $DESKTOP_APPGROUPS_SELECTED
+	Build target:
+	Board: $BOARD
+	Branch: $BRANCH
+	Minimal: $BUILD_MINIMAL
+	Desktop: $BUILD_DESKTOP
+	Desktop Environment: $DESKTOP_ENVIRONMENT
+	Software groups: $DESKTOP_APPGROUPS_SELECTED
 
-Kernel configuration:
-Repository: $KERNELSOURCE
-Branch: $KERNELBRANCH
-Config file: $LINUXCONFIG
+	Kernel configuration:
+	Repository: $KERNELSOURCE
+	Branch: $KERNELBRANCH
+	Config file: $LINUXCONFIG
 
-U-boot configuration:
-Repository: $BOOTSOURCE
-Branch: $BOOTBRANCH
-Config file: $BOOTCONFIG
+	U-boot configuration:
+	Repository: $BOOTSOURCE
+	Branch: $BOOTBRANCH
+	Config file: $BOOTCONFIG
 
-Partitioning configuration:
-Root partition type: $ROOTFS_TYPE
-Boot partition type: ${BOOTFS_TYPE:-(none)}
-User provided boot partition size: ${BOOTSIZE:-0}
-Offset: $OFFSET
+	Partitioning configuration:
+	Root partition type: $ROOTFS_TYPE
+	Boot partition type: ${BOOTFS_TYPE:-(none)}
+	User provided boot partition size: ${BOOTSIZE:-0}
+	Offset: $OFFSET
 
-CPU configuration:
-$CPUMIN - $CPUMAX with $GOVERNOR
+	CPU configuration:
+	$CPUMIN - $CPUMAX with $GOVERNOR
 EOF
