@@ -485,6 +485,12 @@ DEBOOTSTRAP_COMPONENTS="${DEBOOTSTRAP_COMPONENTS// /,}"
 PACKAGE_LIST="$(one_line aggregate_all_cli "packages" " ")"
 PACKAGE_LIST_ADDITIONAL="$(one_line aggregate_all_cli "packages.additional" " ")"
 
+# @TODO: decide, where? 1
+if [[ "$(type -t user_config)" == "function" ]]; then
+	display_alert "Invoke function with user override" "user_config" "info"
+	user_config
+fi
+
 echo "DEBOOTSTRAP LIST : ${DEBOOTSTRAP_LIST}" >> "${DEST}"/debug/output.log
 echo "DEBOOTSTRAP_COMPONENTS : ${DEBOOTSTRAP_COMPONENTS}" >> "${DEST}"/debug/output.log
 echo "CLI PACKAGE_LIST : ${PACKAGE_LIST}" >> "${DEST}"/debug/output.log
@@ -537,6 +543,7 @@ if [[ -f $USERPATCHES_PATH/lib.config ]]; then
 	source "$USERPATCHES_PATH"/lib.config
 fi
 
+# @TODO: decide, where? 2
 if [[ "$(type -t user_config)" == "function" ]]; then
 	display_alert "Invoke function with user override" "user_config" "info"
 	user_config
