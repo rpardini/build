@@ -27,6 +27,14 @@ case $BRANCH in
 		KERNELDIR='linux-odroid'
 	;;
 
+
+	tobetter)
+		KERNELSOURCE='https://github.com/tobetter/linux'
+		KERNELBRANCH='branch:odroid-5.11.y'
+		KERNELDIR='linux-tobetter'
+		KERNELPATCHDIR='meson64-tobetter'
+	;;
+
 	current)
 		KERNELBRANCH='branch:linux-5.10.y'
 		KERNELPATCHDIR='meson64-current'
