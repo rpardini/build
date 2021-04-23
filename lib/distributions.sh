@@ -628,12 +628,13 @@ install_distribution_specific()
 				local RENDERER=networkd
 			fi
 
-			# Basic Netplan config. Let NetworkManager/networkd manage all devices on this system
-			[[ -d "${SDCARD}"/etc/netplan ]] && cat <<-EOF > "${SDCARD}"/etc/netplan/armbian-default.yaml
-			network:
-			  version: 2
-			  renderer: $RENDERER
-			EOF
+			# Pardini: NO, PLEASE, NO
+			# # Basic Netplan config. Let NetworkManager/networkd manage all devices on this system
+			# [[ -d "${SDCARD}"/etc/netplan ]] && cat <<-EOF > "${SDCARD}"/etc/netplan/armbian-default.yaml
+			# network:
+			#   version: 2
+			#   renderer: $RENDERER
+			# EOF
 
 			# DNS fix
 			# Pardini: NO, PLEASE, NO
