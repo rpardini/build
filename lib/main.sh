@@ -376,6 +376,11 @@ else
 
 fi
 
+call_hook_point "post_determine_cthreads" "config_post_determine_cthreads" << 'POST_DETERMINE_CTHREADS'
+*give config a chance modify CTHREADS programatically. A build server may work better with hyperthreads-1 for example.*
+Called early, before any compilation work starts.
+POST_DETERMINE_CTHREADS
+
 if [[ $BETA == yes ]]; then
 	IMAGE_TYPE=nightly
 elif [[ $BETA != "yes" && $BUILD_ALL == yes && -n $GPG_PASS ]]; then
@@ -440,15 +445,16 @@ done
 
 fi
 
-# Compile u-boot if packed .deb does not exist or use the one from repository
-if [[ ! -f "${DEB_STORAGE}"/${CHOSEN_UBOOT}_${REVISION}_${ARCH}.deb ]]; then
-
-	if [[ -n "${ATFSOURCE}" && "${REPOSITORY_INSTALL}" != *u-boot* ]]; then
-		compile_atf
+# Don't build at all if the BOOTCONFIG is 'none'.
+[[ "${BOOTCONFIG}" != "none" ]] && { 
+	# Compile u-boot if packed .deb does not exist or use the one from repository
+	if [[ ! -f "${DEB_STORAGE}"/${CHOSEN_UBOOT}_${REVISION}_${ARCH}.deb ]]; then
+		if [[ -n "${ATFSOURCE}" && "${REPOSITORY_INSTALL}" != *u-boot* ]]; then
+			compile_atf
+		fi
+		[[ "${REPOSITORY_INSTALL}" != *u-boot* ]] && compile_uboot
 	fi
-	[[ "${REPOSITORY_INSTALL}" != *u-boot* ]] && compile_uboot
-
-fi
+}
 
 # Compile kernel if packed .deb does not exist or use the one from repository
 if [[ ! -f ${DEB_STORAGE}/${CHOSEN_KERNEL}_${REVISION}_${ARCH}.deb ]]; then
@@ -507,9 +513,12 @@ else
 	display_alert "File name" "${CHOSEN_KERNEL}_${REVISION}_${ARCH}.deb" "info"
 fi
 
-# hook for function to run after build, i.e. to change owner of $SRC
-# NOTE: this will run only if there were no errors during build process
-[[ $(type -t run_after_build) == function ]] && run_after_build || true
+call_hook_point "run_after_build"  << 'MARKDOWN_DOCUMENTATION'
+*hook for function to run after build, i.e. to change owner of `$SRC`*
+Really one of the last hooks ever called. The build has ended.
+NOTE: this will run only if there were no errors during build process
+MARKDOWN_DOCUMENTATION
+
 
 end=$(date +%s)
 runtime=$(((end-start)/60))

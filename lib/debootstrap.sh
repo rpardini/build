@@ -46,6 +46,11 @@ debootstrap_ng()
 	# stage: prepare basic rootfs: unpack cache or create from scratch
 	create_rootfs_cache
 
+	call_hook_point "pre_install_distribution_specific" "config_pre_install_distribution_specific" << 'PRE_INSTALL_DISTRIBUTION_SPECIFIC'
+*give config a chance to act before install_distribution_specific*
+Called after `create_rootfs_cache` (_prepare basic rootfs: unpack cache or create from scratch_) but before `install_distribution_specific` (_install distribution and board specific applications_).
+PRE_INSTALL_DISTRIBUTION_SPECIFIC
+
 	# stage: install kernel and u-boot packages
 	# install distribution and board specific applications
 
@@ -57,6 +62,11 @@ debootstrap_ng()
 
 	# install from apt.armbian.com
 	[[ $EXTERNAL_NEW == prebuilt ]] && chroot_installpackages "yes"
+
+	call_hook_point "pre_customize_image" "config_pre_customize_image" << 'PRE_CUSTOMIZE_IMAGE'
+*give config a chance to act before customize_image*
+Called after `chroot_installpackages` (_install from apt.armbian.com_) but before `customize_image` (_user customization script_).
+PRE_CUSTOMIZE_IMAGE
 
 	# stage: user customization script
 	# NOTE: installing too many packages may fill tmpfs mount
@@ -118,7 +128,10 @@ create_rootfs_cache()
 		local cache_fname=${SRC}/cache/rootfs/${cache_name}
 		local display_name=${RELEASE}-${cache_type}-${ARCH}.${packages_hash:0:3}...${packages_hash:29}.tar.lz4
 
-		display_alert "Checking for local cache" "$display_name" "info"
+		display_alert "Checking for local cache ${ROOT_FS_LOCAL_CACHE:-and on servers}" "$display_name" "info"
+
+		# if just checking for the local cache, break, dont check on servers.
+		[[ "${ROOT_FS_LOCAL_CACHE}" == "only" ]] && break
 
 		if [[ ! -f $cache_fname && "$ROOT_FS_CREATE_ONLY" != "force" ]]; then
 			display_alert "searching on servers"
@@ -218,8 +231,10 @@ create_rootfs_cache()
 		# stage: create apt-get sources list
 		create_sources_list "$RELEASE" "$SDCARD/"
 
-		# add armhf arhitecture to arm64
-		[[ $ARCH == arm64 ]] && eval 'LC_ALL=C LANG=C chroot $SDCARD /bin/bash -c "dpkg --add-architecture armhf"'
+		# add armhf arhitecture to arm64, unless configured not to do so.
+		if [[ "a${ARMHF_ARCH}" != "askip" ]]; then
+			[[ $ARCH == arm64 ]] && eval 'LC_ALL=C LANG=C chroot $SDCARD /bin/bash -c "dpkg --add-architecture armhf"'
+		fi
 
 		# this should fix resolvconf installation failure in some cases
 		chroot $SDCARD /bin/bash -c 'echo "resolvconf resolvconf/linkify-resolvconf boolean false" | debconf-set-selections'
@@ -455,9 +470,22 @@ prepare_partitions()
 		BOOTSIZE=0
 	fi
 
+	call_hook_point "pre_prepare_partitions" "prepare_partitions_custom" << 'PRE_PREPARE_PARTITIONS'
+*allow custom options for mkfs*
+Called after `chroot_installpackages` (_install from apt.armbian.com_) but before `customize_image` (_user customization script_).
+PRE_PREPARE_PARTITIONS
+
 	# stage: calculate rootfs size
 	local rootfs_size=$(du -sm $SDCARD/ | cut -f1) # MiB
 	display_alert "Current rootfs size" "$rootfs_size MiB" "info"
+
+	call_hook_point "prepare_image_size" "config_prepare_image_size" << 'PREPARE_IMAGE_SIZE'
+*allow dynamically determining the size based on the $rootfs_size*
+Called after `${rootfs_size}` is known, but before `${FIXED_IMAGE_SIZE}` is taken into account.
+A good spot to determine `FIXED_IMAGE_SIZE` based on `rootfs_size`.
+PREPARE_IMAGE_SIZE
+
+
 	if [[ -n $FIXED_IMAGE_SIZE && $FIXED_IMAGE_SIZE =~ ^[0-9]+$ ]]; then
 		display_alert "Using user-defined image size" "$FIXED_IMAGE_SIZE MiB" "info"
 		local sdsize=$FIXED_IMAGE_SIZE
@@ -693,6 +721,11 @@ create_image()
 		rsync -aHWXh --info=progress2,stats1 $SDCARD/boot $MOUNT >> "${DEST}"/debug/install.log 2>&1
 	fi
 
+	call_hook_point "pre_update_initramfs" "config_pre_update_initramfs" << 'PRE_UPDATE_INITRAMFS'
+*allow config to hack into the initramfs create process*
+Called after rsync has synced both `/root` and `/root` on the target, but before calling `update_initramfs`.
+PRE_UPDATE_INITRAMFS
+
 	# stage: create final initramfs
 	update_initramfs $MOUNT
 
@@ -702,17 +735,28 @@ create_image()
 	display_alert "Free SD cache" "$(echo -e "$freespace" | grep $SDCARD | awk '{print $5}')" "info"
 	display_alert "Mount point" "$(echo -e "$freespace" | grep $MOUNT | head -1 | awk '{print $5}')" "info"
 
-	# stage: write u-boot
-	write_uboot $LOOP
+	# stage: write u-boot, unless the deb is not there, which would happen if BOOTCONFIG=none
+	[[ -f "${DEB_STORAGE}"/${CHOSEN_UBOOT}_${REVISION}_${ARCH}.deb ]] &&  write_uboot $LOOP
 
 	# fix wrong / permissions
 	chmod 755 $MOUNT
+
+	call_hook_point "pre_umount_final_image" "config_pre_umount_final_image" << 'PRE_UMOUNT_FINAL_IMAGE'
+*allow config to hack into the image before the unmount*
+Called before unmounting both `/root` and `/boot`.
+PRE_UMOUNT_FINAL_IMAGE
+
 
 	# unmount /boot first, rootfs second, image file last
 	sync
 	[[ $BOOTSIZE != 0 ]] && umount -l $MOUNT/boot
 	[[ $ROOTFS_TYPE != nfs ]] && umount -l $MOUNT
 	[[ $CRYPTROOT_ENABLE == yes ]] && cryptsetup luksClose $ROOT_MAPPER
+
+	call_hook_point "post_umount_final_image" "config_post_umount_final_image" << 'POST_UMOUNT_FINAL_IMAGE'
+*allow config to hack into the image after the unmount*
+Called after unmounting both `/root` and `/boot`.
+POST_UMOUNT_FINAL_IMAGE
 
 	# to make sure its unmounted
 	while grep -Eq '(${MOUNT}|${DESTIMG})' /proc/mounts
@@ -797,8 +841,12 @@ create_image()
 	fi
 	display_alert "Done building" "${FINALDEST}/${version}.img" "info"
 
-	# call custom post build hook
-	[[ $(type -t post_build_image) == function ]] && post_build_image "${FINALDEST}/${version}.img"
+	# Hmm, a variation here: post_build_image was invoked with a parameter, "${FINALDEST}/${version}.img"
+	HOOK_POINT_ARG="${FINALDEST}/${version}.img" call_hook_point "post_build_image"  << 'POST_BUILD_IMAGE'
+*custom post build hook*
+Called after the SD card is built, before it is (possibly) written to an SD writer.
+@TODO: this hook used to take an argument ($1) for the final image produced.
+POST_BUILD_IMAGE
 
 	# write image to SD card
 	if [[ $(lsblk "$CARD_DEVICE" 2>/dev/null) && -f ${FINALDEST}/${version}.img ]]; then

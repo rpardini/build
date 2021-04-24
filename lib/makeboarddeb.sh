@@ -25,24 +25,26 @@ create_board_package()
 	cd $destination
 
 	# install copy of boot script & environment file
-	local bootscript_src=${BOOTSCRIPT%%:*}
-	local bootscript_dst=${BOOTSCRIPT##*:}
-	mkdir -p "${destination}"/usr/share/armbian/
-	if [ -f "${USERPATCHES_PATH}/bootscripts/${bootscript_src}" ]; then
-	  cp "${USERPATCHES_PATH}/bootscripts/${bootscript_src}" "${destination}/usr/share/armbian/${bootscript_dst}"
-	else
-	  cp "${SRC}/config/bootscripts/${bootscript_src}" "${destination}/usr/share/armbian/${bootscript_dst}"
-	fi
-	[[ -n $BOOTENV_FILE && -f $SRC/config/bootenv/$BOOTENV_FILE ]] && \
-		cp "${SRC}/config/bootenv/${BOOTENV_FILE}" "${destination}"/usr/share/armbian/armbianEnv.txt
-
-	# add configuration for setting uboot environment from userspace with: fw_setenv fw_printenv
-	if [[ -n $UBOOT_FW_ENV ]]; then
-		UBOOT_FW_ENV=($(tr ',' ' ' <<< "$UBOOT_FW_ENV"))
-		mkdir -p "${destination}"/etc
-		echo "# Device to access      offset           env size" > "${destination}"/etc/fw_env.config
-		echo "/dev/mmcblk0	${UBOOT_FW_ENV[0]}	${UBOOT_FW_ENV[1]}" >> "${destination}"/etc/fw_env.config
-	fi
+	[[ "${BOOTCONFIG}" != "none" ]] && { 
+		local bootscript_src=${BOOTSCRIPT%%:*}
+		local bootscript_dst=${BOOTSCRIPT##*:}
+		mkdir -p "${destination}"/usr/share/armbian/
+		if [ -f "${USERPATCHES_PATH}/bootscripts/${bootscript_src}" ]; then
+		  cp "${USERPATCHES_PATH}/bootscripts/${bootscript_src}" "${destination}/usr/share/armbian/${bootscript_dst}"
+		else
+		  cp "${SRC}/config/bootscripts/${bootscript_src}" "${destination}/usr/share/armbian/${bootscript_dst}"
+		fi
+		[[ -n $BOOTENV_FILE && -f $SRC/config/bootenv/$BOOTENV_FILE ]] && \
+			cp "${SRC}/config/bootenv/${BOOTENV_FILE}" "${destination}"/usr/share/armbian/armbianEnv.txt
+	
+		# add configuration for setting uboot environment from userspace with: fw_setenv fw_printenv
+		if [[ -n $UBOOT_FW_ENV ]]; then
+			UBOOT_FW_ENV=($(tr ',' ' ' <<< "$UBOOT_FW_ENV"))
+			mkdir -p "${destination}"/etc
+			echo "# Device to access      offset           env size" > "${destination}"/etc/fw_env.config
+			echo "/dev/mmcblk0	${UBOOT_FW_ENV[0]}	${UBOOT_FW_ENV[1]}" >> "${destination}"/etc/fw_env.config
+		fi
+	}
 
 	# Replaces: base-files is needed to replace /etc/update-motd.d/ files on Xenial
 	# Replaces: unattended-upgrades may be needed to replace /etc/apt/apt.conf.d/50unattended-upgrades
@@ -304,8 +306,15 @@ fi
 		cp "${SRC}"/packages/bsp/mpv/mpv_mainline.conf "${destination}"/etc/mpv/mpv.conf
 	fi
 
-	# execute $LINUXFAMILY-specific tweaks
-	[[ $(type -t family_tweaks_bsp) == function ]] && family_tweaks_bsp
+	call_hook_point "family_tweaks_bsp" << 'MARKDOWN_DOCS_FOR_HOOK'
+*execute $LINUXFAMILY-specific tweaks*
+This should be implemented by board or family to tweak the BSP.
+MARKDOWN_DOCS_FOR_HOOK
+
+	call_hook_point "config_tweaks_bsp" << 'MARKDOWN_DOCS_FOR_HOOK'
+*family_tweaks_bsp overrrides what is in the config, so give it a chance to override the family tweaks*
+This should be implemented by the config to tweak the BSP, after the board or family has had the chance to.
+MARKDOWN_DOCS_FOR_HOOK
 
 	# add some summary to the image
 	fingerprint_image "${destination}/etc/armbian.txt"

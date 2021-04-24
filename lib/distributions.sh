@@ -181,11 +181,13 @@ install_common()
 		fi
 	else
 
-		if [ -f "${USERPATCHES_PATH}/bootscripts/${bootscript_src}" ]; then
-			cp "${USERPATCHES_PATH}/bootscripts/${bootscript_src}" "${SDCARD}/boot/${bootscript_dst}"
-		else
-			cp "${SRC}/config/bootscripts/${bootscript_src}" "${SDCARD}/boot/${bootscript_dst}"
-		fi
+		[[ "${BOOTCONFIG}" != "none" ]] && { 
+			if [ -f "${USERPATCHES_PATH}/bootscripts/${bootscript_src}" ]; then
+				cp "${USERPATCHES_PATH}/bootscripts/${bootscript_src}" "${SDCARD}/boot/${bootscript_dst}"
+			else
+				cp "${SRC}/config/bootscripts/${bootscript_src}" "${SDCARD}/boot/${bootscript_dst}"
+			fi
+		}
 
 		if [[ -n $BOOTENV_FILE ]]; then
 			if [[ -f $USERPATCHES_PATH/bootenv/$BOOTENV_FILE ]]; then
@@ -262,13 +264,15 @@ install_common()
 	fi
 
 	# install u-boot
-	if [[ "${REPOSITORY_INSTALL}" != *u-boot* ]]; then
-		UBOOT_VER=$(dpkg --info "${DEB_STORAGE}/${CHOSEN_UBOOT}_${REVISION}_${ARCH}.deb" | grep Descr | awk '{print $(NF)}')
-		install_deb_chroot "${DEB_STORAGE}/${CHOSEN_UBOOT}_${REVISION}_${ARCH}.deb"
-	else
-		install_deb_chroot "linux-u-boot-${BOARD}-${BRANCH}" "remote" "yes"
-		UPSTREM_VER=$(dpkg-deb -f "${SDCARD}"/var/cache/apt/archives/linux-u-boot-${BOARD}-${BRANCH}*_${ARCH}.deb Version)
-	fi
+	[[ "${BOOTCONFIG}" != "none" ]] && {
+		if [[ "${REPOSITORY_INSTALL}" != *u-boot* ]]; then
+			UBOOT_VER=$(dpkg --info "${DEB_STORAGE}/${CHOSEN_UBOOT}_${REVISION}_${ARCH}.deb" | grep Descr | awk '{print $(NF)}')
+			install_deb_chroot "${DEB_STORAGE}/${CHOSEN_UBOOT}_${REVISION}_${ARCH}.deb"
+		else
+			install_deb_chroot "linux-u-boot-${BOARD}-${BRANCH}" "remote" "yes"
+			UPSTREM_VER=$(dpkg-deb -f "${SDCARD}"/var/cache/apt/archives/linux-u-boot-${BOARD}-${BRANCH}*_${ARCH}.deb Version)
+		fi
+	}
 
 	# install kernel
 	if [[ "${REPOSITORY_INSTALL}" != *kernel* ]]; then
@@ -289,6 +293,11 @@ install_common()
 		install_deb_chroot "linux-dtb-${BRANCH}-${LINUXFAMILY}" "remote"
 		[[ $INSTALL_HEADERS == yes ]] && install_deb_chroot "linux-headers-${BRANCH}-${LINUXFAMILY}" "remote"
 	fi
+	
+	call_hook_point "post_install_kernel_debs" "config_post_install_kernel_debs" << 'MARKDOWN_DOCS_FOR_HOOK'
+*allow config to do more with the installed kernel/headers*
+Called after packages, u-boot, kernel and headers installed in the chroot, but before the BSP is installed.
+MARKDOWN_DOCS_FOR_HOOK
 
 	# install board support packages
 	if [[ "${REPOSITORY_INSTALL}" != *bsp* ]]; then
@@ -366,8 +375,10 @@ install_common()
 	# copy boot splash images
 	cp "${SRC}"/packages/blobs/splash/armbian-u-boot.bmp "${SDCARD}"/boot/boot.bmp
 
-	# execute $LINUXFAMILY-specific tweaks
-	[[ $(type -t family_tweaks) == function ]] && family_tweaks
+	call_hook_point "family_tweaks" << 'MARKDOWN_DOCS_FOR_HOOK'
+*execute $LINUXFAMILY-specific tweaks*
+@TODO: docs missing
+MARKDOWN_DOCS_FOR_HOOK
 
 	# enable additional services
 	chroot "${SDCARD}" /bin/bash -c "systemctl --no-reload enable armbian-firstrun.service >/dev/null 2>&1"
@@ -667,5 +678,10 @@ post_debootstrap_tweaks()
 	chroot "${SDCARD}" /bin/bash -c "dpkg-divert --quiet --local --rename --remove /sbin/initctl"
 	chroot "${SDCARD}" /bin/bash -c "dpkg-divert --quiet --local --rename --remove /sbin/start-stop-daemon"
 	rm -f "${SDCARD}"/usr/sbin/policy-rc.d "${SDCARD}/usr/bin/${QEMU_BINARY}"
+
+	call_hook_point "config_post_debootstrap_tweaks" << 'MARKDOWN_DOCS_FOR_HOOK'
+*delegate back to config*
+@TODO: docs missing
+MARKDOWN_DOCS_FOR_HOOK
 
 }
