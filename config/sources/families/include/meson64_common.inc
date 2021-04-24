@@ -32,7 +32,7 @@ case $BRANCH in
 		KERNELSOURCE='https://github.com/tobetter/linux'
 		KERNELBRANCH='branch:odroid-5.11.y'
 		KERNELDIR='linux-tobetter'
-		KERNELPATCHDIR='meson64-tobetter'
+		KERNELPATCHDIR='meson64-edge'
 	;;
 
 	current)
