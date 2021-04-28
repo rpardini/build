@@ -717,6 +717,9 @@ create_image()
 		rsync -aHWXh --info=progress2,stats1 $SDCARD/boot $MOUNT >> "${DEST}"/debug/install.log 2>&1
 	fi
 
+	# allow config to hack into the initramfs create process
+	[[ $(type -t config_pre_update_initramfs) == function ]] && config_pre_update_initramfs
+
 	# stage: create final initramfs
 	update_initramfs $MOUNT
 
@@ -727,7 +730,7 @@ create_image()
 	display_alert "Mount point" "$(echo -e "$freespace" | grep $MOUNT | head -1 | awk '{print $5}')" "info"
 
 	# stage: write u-boot
-	write_uboot $LOOP
+	# write_uboot $LOOP
 
 	# fix wrong / permissions
 	chmod 755 $MOUNT

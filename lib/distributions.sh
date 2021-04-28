@@ -261,14 +261,14 @@ install_common()
 		chroot "${SDCARD}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive  apt-get -yqq remove --auto-remove $PACKAGE_LIST_BOARD_REMOVE" >> "${DEST}"/debug/install.log
 	fi
 
-	# install u-boot
-	if [[ "${REPOSITORY_INSTALL}" != *u-boot* ]]; then
-		UBOOT_VER=$(dpkg --info "${DEB_STORAGE}/${CHOSEN_UBOOT}_${REVISION}_${ARCH}.deb" | grep Descr | awk '{print $(NF)}')
-		install_deb_chroot "${DEB_STORAGE}/${CHOSEN_UBOOT}_${REVISION}_${ARCH}.deb"
-	else
-		install_deb_chroot "linux-u-boot-${BOARD}-${BRANCH}" "remote" "yes"
-		UPSTREM_VER=$(dpkg-deb -f "${SDCARD}"/var/cache/apt/archives/linux-u-boot-${BOARD}-${BRANCH}*_${ARCH}.deb Version)
-	fi
+	## # install u-boot
+	## if [[ "${REPOSITORY_INSTALL}" != *u-boot* ]]; then
+	## 	UBOOT_VER=$(dpkg --info "${DEB_STORAGE}/${CHOSEN_UBOOT}_${REVISION}_${ARCH}.deb" | grep Descr | awk '{print $(NF)}')
+	## 	install_deb_chroot "${DEB_STORAGE}/${CHOSEN_UBOOT}_${REVISION}_${ARCH}.deb"
+	## else
+	## 	install_deb_chroot "linux-u-boot-${BOARD}-${BRANCH}" "remote" "yes"
+	## 	UPSTREM_VER=$(dpkg-deb -f "${SDCARD}"/var/cache/apt/archives/linux-u-boot-${BOARD}-${BRANCH}*_${ARCH}.deb Version)
+	## fi
 
 	# install kernel
 	if [[ "${REPOSITORY_INSTALL}" != *kernel* ]]; then
