@@ -674,6 +674,9 @@ update_initramfs()
 	cp /usr/bin/$QEMU_BINARY $chroot_target/usr/bin/
 	mount_chroot "$chroot_target/"
 
+	#display_alert "Gonna update initramfs, bash in chroot first" "info"
+	#chroot $chroot_target /bin/bash 
+
 	chroot $chroot_target /bin/bash -c "$update_initramfs_cmd" >> $DEST/debug/install.log 2>&1
 	display_alert "Updated initramfs." "for details see: $DEST/debug/install.log" "info"
 
@@ -717,6 +720,9 @@ create_image()
 		rsync -aHWXh --info=progress2,stats1 $SDCARD/boot $MOUNT >> "${DEST}"/debug/install.log 2>&1
 	fi
 
+	# allow config to hack into the initramfs create process
+	[[ $(type -t config_pre_update_initramfs) == function ]] && config_pre_update_initramfs
+
 	# stage: create final initramfs
 	update_initramfs $MOUNT
 
@@ -727,7 +733,7 @@ create_image()
 	display_alert "Mount point" "$(echo -e "$freespace" | grep $MOUNT | head -1 | awk '{print $5}')" "info"
 
 	# stage: write u-boot
-	write_uboot $LOOP
+	# write_uboot $LOOP
 
 	# fix wrong / permissions
 	chmod 755 $MOUNT
@@ -744,7 +750,7 @@ create_image()
 	# allow config to hack into the image after the unmount...
 	[[ $(type -t config_post_umount_final_image) == function ]] && config_post_umount_final_image
 
-	# to make sure its unmounted
+	# to make sure its unmounted. @TODO: does this really work? variables inside single quotes are not expanded.
 	while grep -Eq '(${MOUNT}|${DESTIMG})' /proc/mounts
 	do
 		display_alert "Unmounting" "${MOUNT}" "info"

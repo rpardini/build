@@ -10,11 +10,12 @@
 # Some additional examples are provided in comments below the default
 # configuration.
 
-# On first boot, set the root password to "armbian"
+# On first boot, set the root and users password to "armbian"
 chpasswd:
-        expire: false
-        list:
-                - root:armbian
+  expire: false
+  list:
+    - root:armbian
+    - ubuntu:armbian
 
 # Enable password authentication with the SSH daemon
 ssh_pwauth: true
