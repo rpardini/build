@@ -727,7 +727,7 @@ create_image()
 	display_alert "Mount point" "$(echo -e "$freespace" | grep $MOUNT | head -1 | awk '{print $5}')" "info"
 
 	# stage: write u-boot
-	write_uboot $LOOP
+	# write_uboot $LOOP
 
 	# fix wrong / permissions
 	chmod 755 $MOUNT

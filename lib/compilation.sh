@@ -384,6 +384,8 @@ compile_kernel()
 
 	# hack for deb builder. To pack what's missing in headers pack.
 	cp "${SRC}"/patch/misc/headers-debian-byteshift.patch /tmp
+	
+	set -x
 
 	if [[ $KERNEL_CONFIGURE != yes ]]; then
 		if [[ $BRANCH == default ]]; then
@@ -396,7 +398,7 @@ compile_kernel()
 		fi
 	else
 		eval CCACHE_BASEDIR="$(pwd)" env PATH="${toolchain}:${PATH}" \
-			'make $CTHREADS ARCH=$ARCHITECTURE CROSS_COMPILE="$CCACHE $KERNEL_COMPILER" oldconfig'
+			'make $CTHREADS ARCH=$ARCHITECTURE CROSS_COMPILE="$CCACHE $KERNEL_COMPILER" defconfig'
 		eval CCACHE_BASEDIR="$(pwd)" env PATH="${toolchain}:${PATH}" \
 			'make $CTHREADS ARCH=$ARCHITECTURE CROSS_COMPILE="$CCACHE $KERNEL_COMPILER" ${KERNEL_MENUCONFIG:-menuconfig}'
 
@@ -488,6 +490,8 @@ compile_kernel()
 	hash_watch_1=$(find "${SRC}/patch/kernel/${KERNELPATCHDIR}/" -maxdepth 1 -printf '%s %P\n' 2> /dev/null | sort)
 	hash_watch_2=$(cat "${SRC}/config/kernel/${LINUXCONFIG}.config")
 	echo "${hash_watch_1}${hash_watch_2}" | improved_git hash-object --stdin >> "${SRC}/cache/hash"$([[ ${BETA} == yes ]] && echo "-beta")"/linux-image-${BRANCH}-${LINUXFAMILY}.githash"
+	
+	set +x
 }
 
 
