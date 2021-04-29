@@ -674,6 +674,9 @@ update_initramfs()
 	cp /usr/bin/$QEMU_BINARY $chroot_target/usr/bin/
 	mount_chroot "$chroot_target/"
 
+	#display_alert "Gonna update initramfs, bash in chroot first" "info"
+	#chroot $chroot_target /bin/bash 
+
 	chroot $chroot_target /bin/bash -c "$update_initramfs_cmd" >> $DEST/debug/install.log 2>&1
 	display_alert "Updated initramfs." "for details see: $DEST/debug/install.log" "info"
 
@@ -716,6 +719,9 @@ create_image()
 		# ext4
 		rsync -aHWXh --info=progress2,stats1 $SDCARD/boot $MOUNT >> "${DEST}"/debug/install.log 2>&1
 	fi
+
+	# allow config to hack into the initramfs create process
+	[[ $(type -t config_pre_update_initramfs) == function ]] && config_pre_update_initramfs
 
 	# stage: create final initramfs
 	update_initramfs $MOUNT
