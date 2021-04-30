@@ -8,15 +8,17 @@ prereqs)
 	;;
 esac
 
-deviceinfo_name="OnePlus 5"
+deviceinfo_name="Armbian on OnePlus"
 deviceinfo_manufacturer="OnePlus"
-usb_idVendor="0x18D1"  # Google Inc.
-usb_idProduct="0xD001" # Nexus 4 (fastboot)
+#usb_idVendor="0x18D1"  # Google Inc.
+#usb_idProduct="0xD001" # Nexus 4 (fastboot)
+usb_idVendor="0x1d6b"  # Linux Foundation
+usb_idProduct="0x104" # Ethernet Gadget.
 usb_serialnumber="Armbian"
 
 clear
 echo "Armbian initramfs: start USB Gadget mode."
-echo "Armbian initramfs: ttyGS0 and USB Network."
+echo "Armbian initramfs: ttyGS0 and USB Networks."
 sleep 1
 
 # Check if there's an USB Device Controller
@@ -63,12 +65,17 @@ echo "Create ACM device"
 mkdir ${FUNCTIONS}/acm.usb0 || echo "  Couldn't create ${FUNCTIONS}/acm.usb0"
 ln -s ${FUNCTIONS}/acm.usb0 ${CONFIG} || echo "  Couldn't symlink acm.usb0"
 
-## RNDIS (Network)
+## RNDIS (Network) - Works well with Linux, and supposedly Windows, but not on modern Macs.
 echo "Create RNDIS device"
 mkdir ${FUNCTIONS}/rndis.usb0 || echo "  Couldn't create ${FUNCTIONS}/rndis.usb0"
 mkdir ${CONFIG}/strings/0x409 || echo "  Couldn't create ${CONFIG}/strings/0x409"
 echo "rndis" >${CONFIG}/strings/0x409/configuration || echo "  Couldn't write configuration name"
 ln -s ${FUNCTIONS}/rndis.usb0 ${CONFIG} || echo "  Couldn't symlink rndis.usb0"
+
+## ## ECM (Network) - Should work on Linux and Mac, but not Windows. I actually couldnt make it work under Mac.
+## echo "Create ECM device"
+## mkdir ${FUNCTIONS}/ecm.usb0 || echo "  Couldn't create ${FUNCTIONS}/ecm.usb0"
+## ln -s ${FUNCTIONS}/ecm.usb0 ${CONFIG} || echo "  Couldn't symlink ecm.usb0"
 
 echo "Done creating functions and configs, enabling UDC.."
 

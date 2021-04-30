@@ -15,7 +15,6 @@ chpasswd:
   expire: false
   list:
     - root:armbian
-    - default:armbian
     - ubuntu:armbian
 
 # Enable password authentication with the SSH daemon
