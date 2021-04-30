@@ -750,7 +750,7 @@ create_image()
 	# allow config to hack into the image after the unmount...
 	[[ $(type -t config_post_umount_final_image) == function ]] && config_post_umount_final_image
 
-	# to make sure its unmounted
+	# to make sure its unmounted. @TODO: does this really work? variables inside single quotes are not expanded.
 	while grep -Eq '(${MOUNT}|${DESTIMG})' /proc/mounts
 	do
 		display_alert "Unmounting" "${MOUNT}" "info"

@@ -15,16 +15,26 @@ usb_idProduct="0xD001" # Nexus 4 (fastboot)
 usb_serialnumber="Armbian"
 
 clear
-echo "ONEPLUS ANDROID usbgadget BRINGUP START"
-sleep 5
-
-echo "Mount configfs in 1s.."
+echo "Armbian initramfs: start USB Gadget mode."
+echo "Armbian initramfs: ttyGS0 and USB Network."
 sleep 1
+
+# Check if there's an USB Device Controller
+if [ -z "$(ls /sys/class/udc)" ]; then
+	echo "  No USB Device Controller available"
+	sleep 5
+	return
+else
+	echo "Armbian initramfs: found UDC: $(ls /sys/class/udc)"
+fi
 
 mkdir -p /config
 mount -t configfs -o nodev,noexec,nosuid configfs /config
 
 CONFIGFS=/config/usb_gadget
+GADGET=${CONFIGFS}/g1
+CONFIG=${GADGET}/configs/c.1
+FUNCTIONS=${GADGET}/functions
 
 if ! [ -e "$CONFIGFS" ]; then
 	echo "  /config/usb_gadget does not exist, skipping configfs usb gadget"
@@ -33,57 +43,38 @@ if ! [ -e "$CONFIGFS" ]; then
 fi
 
 echo "  Setting up an USB gadget through configfs"
-mkdir $CONFIGFS/g1 || echo "  Couldn't create $CONFIGFS/g1"
-echo "$usb_idVendor" >"$CONFIGFS/g1/idVendor"
-echo "$usb_idProduct" >"$CONFIGFS/g1/idProduct"
+mkdir ${GADGET} || echo "  Couldn't create ${GADGET}"
+echo "$usb_idVendor" >"${GADGET}/idVendor"
+echo "$usb_idProduct" >"${GADGET}/idProduct"
 
 # Create english (0x409) strings
-mkdir $CONFIGFS/g1/strings/0x409 || echo "  Couldn't create $CONFIGFS/g1/strings/0x409"
+mkdir ${GADGET}/strings/0x409 || echo "  Couldn't create ${GADGET}/strings/0x409"
 
-echo "$deviceinfo_manufacturer" >"$CONFIGFS/g1/strings/0x409/manufacturer"
-echo "$usb_serialnumber" >"$CONFIGFS/g1/strings/0x409/serialnumber"
-echo "$deviceinfo_name" >"$CONFIGFS/g1/strings/0x409/product"
+echo "$deviceinfo_manufacturer" >"${GADGET}/strings/0x409/manufacturer"
+echo "$usb_serialnumber" >"${GADGET}/strings/0x409/serialnumber"
+echo "$deviceinfo_name" >"${GADGET}/strings/0x409/product"
 
 # Create configuration instance
-mkdir $CONFIGFS/g1/configs/c.1 || echo "  Couldn't create $CONFIGFS/g1/configs/c.1"
+mkdir ${CONFIG} || echo "  Couldn't create ${CONFIG}"
 
 ## ACM device
 
 echo "Create ACM device"
-# Create serial/acm function.
-mkdir $CONFIGFS/g1/functions/acm.usb0 || echo "  Couldn't create $CONFIGFS/g1/functions/acm.usb0"
-
-# Link the serial instance to the configuration
-ln -s $CONFIGFS/g1/functions/acm.usb0 $CONFIGFS/g1/configs/c.1 || echo "  Couldn't symlink acm.usb0"
+mkdir ${FUNCTIONS}/acm.usb0 || echo "  Couldn't create ${FUNCTIONS}/acm.usb0"
+ln -s ${FUNCTIONS}/acm.usb0 ${CONFIG} || echo "  Couldn't symlink acm.usb0"
 
 ## RNDIS (Network)
+echo "Create RNDIS device"
+mkdir ${FUNCTIONS}/rndis.usb0 || echo "  Couldn't create ${FUNCTIONS}/rndis.usb0"
+mkdir ${CONFIG}/strings/0x409 || echo "  Couldn't create ${CONFIG}/strings/0x409"
+echo "rndis" >${CONFIG}/strings/0x409/configuration || echo "  Couldn't write configuration name"
+ln -s ${FUNCTIONS}/rndis.usb0 ${CONFIG} || echo "  Couldn't symlink rndis.usb0"
 
-# Create rndis function.
-mkdir $CONFIGFS/g1/functions/rndis.usb0 || echo "  Couldn't create $CONFIGFS/g1/functions/rndis.usb0"
+echo "Done creating functions and configs, enabling UDC.."
 
-mkdir $CONFIGFS/g1/configs/c.1/strings/0x409 || echo "  Couldn't create $CONFIGFS/g1/configs/c.1/strings/0x409"
-echo "rndis" >$CONFIGFS/g1/configs/c.1/strings/0x409/configuration || echo "  Couldn't write configuration name"
-
-# Link the rndis instance to the configuration
-ln -s $CONFIGFS/g1/functions/rndis.usb0 $CONFIGFS/g1/configs/c.1 || echo "  Couldn't symlink rndis.usb0"
-
-echo "Done creating functions and configs, going for the UDC.."
-
-# Check if there's an USB Device Controller
-if [ -z "$(ls /sys/class/udc)" ]; then
-	echo "  No USB Device Controller available"
-	sleep 5
-	return
-fi
-
-# Link the gadget instance to an USB Device Controller. This activates the gadget.
-# See also: https://github.com/postmarketOS/pmbootstrap/issues/338
-# shellcheck disable=SC2005
-echo "$(ls /sys/class/udc)" >$CONFIGFS/g1/UDC || echo "  Couldn't write UDC"
+echo "$(ls /sys/class/udc)" >${GADGET}/UDC || echo "  Couldn't write UDC"
 
 umount /config
 
-echo "Done Android USB bringup"
-sleep 30
-
-echo "Exiting ANDROID usbgadget hook"
+echo "Armbian initramfs: done USB Gadget mode."
+sleep 1
