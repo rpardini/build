@@ -5,3 +5,5 @@
 #
 # https://cloudinit.readthedocs.io/
 
+example-key: "example-value"
+
