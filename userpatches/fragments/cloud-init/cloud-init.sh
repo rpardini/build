@@ -103,6 +103,10 @@ user_config__enable_cloudinit() {
 }
 
 user_config_post_aggregate_packages__confirm_cloudinit_packages() {
+	echo "Fragment: HOOK_POINT:${HOOK_POINT} HOOK_POINT_FUNCTION:${HOOK_POINT_FUNCTION}"
+	echo "Fragment: FRAGMENT_DIR:${FRAGMENT_DIR}"
+	echo "Fragment: FRAGMENT_FILE:${FRAGMENT_FILE}"
+	
 	# Make sure the package aggregation is not insane / changed too much
 	# by checking that the final PACKAGE_LIST contains 'cloud-init' and 'netplan.io'
 	if [[ ${PACKAGE_LIST} == *"cloud-init"* ]]; then

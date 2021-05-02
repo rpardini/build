@@ -50,13 +50,13 @@ export SD_ROOT_DEV_UUID="11111111-1111-1111-1111-111111111111"
 export SD_ROOT_DEV="UUID=${SD_ROOT_DEV_UUID}"
 
 # last chance to modify mkopts and such, add labels to partitions
-prepare_partitions_custom() {
+prepare_partitions_custom__add_uuid_to_rootfs() {
 	display_alert "Custom config stage" "prepare_partitions_custom" "info"
 	display_alert "prepare_partitions_custom adding to mfks ext4" "-U ${SD_ROOT_DEV_UUID}" "info"
 	mkopts[ext4]="-U ${SD_ROOT_DEV_UUID} ${mkopts[ext4]}"
 }
 
-user_config__decompress_blobs() {
+user_config__decompress_balbes_blobs() {
 	display_alert "Custom config stage" "user_config__decompress_blobs" "info"
 	[[ ! -f "$USERPATCHES_PATH/overlay/jumpstart/sd-root-root/balbe_bootloader_sd_4mb.img" ]] &&
 		unxz -k "$USERPATCHES_PATH/overlay/jumpstart/sd-root-root/balbe_bootloader_sd_4mb.img.xz"
@@ -68,7 +68,7 @@ user_config__decompress_blobs() {
 		unxz -k "$USERPATCHES_PATH/overlay/jumpstart/sd-root-root/t95z_android_recover.img.xz"
 }
 
-image_tweaks_pre_customize__jumpstart() {
+image_tweaks_pre_customize__add_balbes_uboot() {
 	display_alert "Custom config stage" "image_tweaks_pre_customize__jumpstart" "info"
 
 	##### # Expand the binaries.
@@ -131,6 +131,8 @@ image_tweaks_pre_customize__jumpstart() {
 	cp "${SDCARD}/boot/${JUMPSTART_UBOOT}" "${SDCARD}"/boot/u-boot.ext
 
 }
+
+## Internal functions
 
 # process template from stdin to stdout using the vars
 process_jumpstart_template() {

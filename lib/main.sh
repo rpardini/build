@@ -75,6 +75,8 @@ source "${SRC}"/lib/general.sh							# general functions
 # shellcheck source=chroot-buildpackages.sh
 source "${SRC}"/lib/chroot-buildpackages.sh					# building packages in chroot
 
+initialize_fragment_manager
+
 # compress and remove old logs
 mkdir -p "${DEST}"/debug
 (cd "${DEST}"/debug && tar -czf logs-"$(<timestamp)".tgz ./*.log) > /dev/null 2>&1
@@ -535,6 +537,10 @@ $([[ -n $COMPRESS_OUTPUTIMAGE ]] && echo "COMPRESS_OUTPUTIMAGE=${COMPRESS_OUTPUT
 " "ext"
 
 } # end of do_default()
+
+echo "Enough"
+exit 2
+
 
 if [[ -z $1 ]]; then
 	do_default
