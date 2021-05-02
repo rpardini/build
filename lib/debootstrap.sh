@@ -126,8 +126,8 @@ create_rootfs_cache()
 
 		display_alert "Checking for local cache ${ROOT_FS_LOCAL_CACHE:-and on servers}" "$display_name" "info"
 
-		# if just checking for the local cache, check and break if found before checking servers.
-		[[ "${ROOT_FS_LOCAL_CACHE}" == "only" ]] && [[ -f $cache_fname ]] && break
+		# if just checking for the local cache, break, dont check on servers.
+		[[ "${ROOT_FS_LOCAL_CACHE}" == "only" ]] && break
 
 		if [[ ! -f $cache_fname && "$ROOT_FS_CREATE_ONLY" != "force" ]]; then
 			display_alert "searching on servers"

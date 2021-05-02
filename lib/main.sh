@@ -443,16 +443,16 @@ done
 
 fi
 
-# Compile u-boot if packed .deb does not exist or use the one from repository
-if [[ ! -f "${DEB_STORAGE}"/${CHOSEN_UBOOT}_${REVISION}_${ARCH}.deb ]]; then
-
-	if [[ -n "${ATFSOURCE}" && "${REPOSITORY_INSTALL}" != *u-boot* ]]; then
-		compile_atf
+# Don't build at all if the BOOTCONFIG is 'none'.
+[[ "${BOOTCONFIG}" != "none" ]] && { 
+	# Compile u-boot if packed .deb does not exist or use the one from repository
+	if [[ ! -f "${DEB_STORAGE}"/${CHOSEN_UBOOT}_${REVISION}_${ARCH}.deb ]]; then
+		if [[ -n "${ATFSOURCE}" && "${REPOSITORY_INSTALL}" != *u-boot* ]]; then
+			compile_atf
+		fi
+		[[ "${REPOSITORY_INSTALL}" != *u-boot* ]] && compile_uboot
 	fi
-	# Don't build if the BOOTCONFIG is 'none' or if it is to be installed from the repo
-	[[ "${BOOTCONFIG}" != "none" ]] && [[ "${REPOSITORY_INSTALL}" != *u-boot* ]] && compile_uboot
-
-fi
+}
 
 # Compile kernel if packed .deb does not exist or use the one from repository
 if [[ ! -f ${DEB_STORAGE}/${CHOSEN_KERNEL}_${REVISION}_${ARCH}.deb ]]; then
