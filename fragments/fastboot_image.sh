@@ -1,5 +1,9 @@
 ## Configuration
 
+# @TODO: either - make sure the host has the needed tools (abootimg, mkimage, etc), apt install abootimg
+# @TODO:     or - move the whole android-specific stuff inside the image and run during update-initramfs
+# @TODO: use decent var names. early ones were rips from pmOS. (or: just curl/source the deviceinfo from there)
+
 # We need to label the rootFS with an ext4 label so that we can find it, both at system and at userdata partitions.
 # The user can choose where to flash it when it comes to fastboot flash.
 # It is indeed hardcoded into the kernel cmdline, so the boot and rootfs images have to match.

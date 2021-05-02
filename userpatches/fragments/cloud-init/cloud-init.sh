@@ -35,10 +35,10 @@ image_tweaks_pre_customize__cloud_init() {
 
 	cp "${FRAGMENT_DIR}"/config/user-data.yaml "${SDCARD}${CLOUD_INIT_CONFIG_LOCATION}"/user-data
 
-	# Hooks within hooks, why not. @TODO: completely refactor this using new fragments structure
-	[[ $(type -t board_determine_cloud_init_network_config_template) == function ]] && board_determine_cloud_init_network_config_template
-	[[ $(type -t config_determine_cloud_init_network_config_template) == function ]] && config_determine_cloud_init_network_config_template
-	display_alert "Using network-config" "network-configs/${CLOUD_INIT_NET_CONFIG_FILE}.yaml" "info"
+	# This module has hook points, just like the regular Armbian build system. So fragments can influence other fragments. Neat?
+	# In this case, fragments compete to modify CLOUD_INIT_NET_CONFIG_FILE, so the ordering of the hooks is extremely important.
+	[[ $(type -t cloud_init_determine_network_config_template) == function ]] && cloud_init_determine_network_config_template
+	display_alert "Using network-config (final)" "network-configs/${CLOUD_INIT_NET_CONFIG_FILE}.yaml" "info"
 
 	cp "${FRAGMENT_DIR}"/config/network-configs/${CLOUD_INIT_NET_CONFIG_FILE}.yaml "${SDCARD}${CLOUD_INIT_CONFIG_LOCATION}"/network-config
 
