@@ -538,10 +538,6 @@ $([[ -n $COMPRESS_OUTPUTIMAGE ]] && echo "COMPRESS_OUTPUTIMAGE=${COMPRESS_OUTPUT
 
 } # end of do_default()
 
-echo "Enough"
-exit 2
-
-
 if [[ -z $1 ]]; then
 	do_default
 else

@@ -1,4 +1,7 @@
-display_alert "Activating fragment" "fragment-jumpstart-sd-boot" "info"
+# This is very old stuff pre-2020. 
+# In the end, I used up a zeroed out eMMC, sd card from this build with balbe's uboot + uboot.ext + extlinux and it worked.
+# I saw some recent activity on master regarding extlinux, worth investigating.
+
 
 ###
 ### Jumpstart config;

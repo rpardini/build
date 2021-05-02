@@ -1,4 +1,8 @@
-display_alert "Activating fragment" "fragment-netplan+cloud-init" "info"
+# This fragment enables cloud-init.
+# As a side effect it removes NetworkManager and replaces it with netplan.io and the systemd/networkd renderer.
+# It sets up in a way that the user-data, meta-data and network-config reside in /boot (CLOUD_INIT_CONFIG_LOCATION)
+# it can be used to setup users, passwords, ssh keys, install packages, install and delegate to ansible, etc.
+# cloud providers allow setting user-data, but provide network-config and meta-data themselves; here we try
 
 # Config for cloud-init.
 export CLOUD_INIT_USER_DATA_URL="files"                   # "files" to use config files, or an URL to go straight to it
@@ -24,22 +28,19 @@ export DEBUG_PACKAGE_LISTS=false
 image_tweaks_pre_customize__cloud_init() {
 	display_alert "Custom config stage" "image_tweaks_pre_customize__cloud_init" "info"
 
-	# cloud-init stuff; copy from overlay
 	echo -e "# configure cloud-init for NoCloud\ndatasource_list: [ NoCloud, None ]\ndatasource:\n  NoCloud: \n    dsmode: local\n    seedfrom: /boot/" >>"${SDCARD}"/etc/cloud/cloud.cfg.d/99-armbian.cfg
-	#cat "${SDCARD}"/etc/cloud/cloud.cfg.d/99-armbian.cfg
 
-	cp "${USERPATCHES_PATH}"/overlay/cloud-init/user-config-default/meta-data.yaml "${SDCARD}${CLOUD_INIT_CONFIG_LOCATION}"/meta-data
-	echo "\n\ninstance-id: armbian-${BOARD}" >>"${SDCARD}${CLOUD_INIT_CONFIG_LOCATION}"/meta-data
-	#cat "${SDCARD}${CLOUD_INIT_CONFIG_LOCATION}"/meta-data
+	cp "${FRAGMENT_DIR}"/config/meta-data.yaml "${SDCARD}${CLOUD_INIT_CONFIG_LOCATION}"/meta-data
+	echo -e "\n\ninstance-id: armbian-${BOARD}" >>"${SDCARD}${CLOUD_INIT_CONFIG_LOCATION}"/meta-data
 
-	cp "${USERPATCHES_PATH}"/overlay/cloud-init/user-config-default/user-data.yaml "${SDCARD}${CLOUD_INIT_CONFIG_LOCATION}"/user-data
+	cp "${FRAGMENT_DIR}"/config/user-data.yaml "${SDCARD}${CLOUD_INIT_CONFIG_LOCATION}"/user-data
 
-	# Hooks within hooks, why not.
+	# Hooks within hooks, why not. @TODO: completely refactor this using new fragments structure
 	[[ $(type -t board_determine_cloud_init_network_config_template) == function ]] && board_determine_cloud_init_network_config_template
 	[[ $(type -t config_determine_cloud_init_network_config_template) == function ]] && config_determine_cloud_init_network_config_template
 	display_alert "Using network-config" "network-configs/${CLOUD_INIT_NET_CONFIG_FILE}.yaml" "info"
 
-	cp "${USERPATCHES_PATH}"/overlay/cloud-init/user-config-default/network-configs/${CLOUD_INIT_NET_CONFIG_FILE}.yaml "${SDCARD}${CLOUD_INIT_CONFIG_LOCATION}"/network-config
+	cp "${FRAGMENT_DIR}"/config/network-configs/${CLOUD_INIT_NET_CONFIG_FILE}.yaml "${SDCARD}${CLOUD_INIT_CONFIG_LOCATION}"/network-config
 
 	# overwrite default (user-oriented) user-data with direct #include via CLOUD_INIT_USER_DATA_URL (automation oriented)
 	if [[ "a${CLOUD_INIT_USER_DATA_URL}" != "afiles" ]]; then
@@ -55,7 +56,7 @@ image_tweaks_pre_customize__cloud_init() {
 	ln -s "${CLOUD_INIT_CONFIG_LOCATION}/meta-data" "${seed_dir}"/meta-data
 	ln -s "${CLOUD_INIT_CONFIG_LOCATION}/network-config" "${seed_dir}"/network-config
 
-	# cleanup -- cloud-init makes some Armbian stuff obsolete
+	# cleanup -- cloud-init makes some Armbian stuff actually get in the way
 	[[ -f "${SDCARD}/boot/armbian_first_run.txt.template" ]] && rm -f "${SDCARD}/boot/armbian_first_run.txt.template"
 	[[ -f "${SDCARD}/root/.not_logged_in_yet" ]] && rm -f "${SDCARD}/root/.not_logged_in_yet"
 }

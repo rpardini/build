@@ -5,7 +5,6 @@
 # It is indeed hardcoded into the kernel cmdline, so the boot and rootfs images have to match.
 export ROOT_FS_LABEL="Armbian_root"
 
-
 ## Hooks
 user_config__disable_all_image_fingerprints_and_compression() {
 	display_alert "Custom config stage" "user_config__disable_all_image_fingerprints_and_compression" "info"

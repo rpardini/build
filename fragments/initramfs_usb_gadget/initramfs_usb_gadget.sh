@@ -1,9 +1,10 @@
 
 # @TODO: document the usb gadget with example cmdlines for the host, like
 # ifconfig usb0 up 172.16.42.2 netmask 255.255.255.0; sysctl net.ipv4.ip_forward=1; iptables -P FORWARD ACCEPT; iptables -A POSTROUTING -t nat -j MASQUERADE -s 172.16.42.0/24
+
 config_pre_customize_image__inject_initramfs_usb_gadget() {
 	display_alert "Custom config stage" "config_pre_customize_image__inject_initramfs_usb_gadget" "info"
-	local script_file_src="${USERPATCHES_PATH}/overlay/usb_gadget/usbgadget.sh"
+	local script_file_src="${FRAGMENT_DIR}/init-premount/usbgadget.sh"
 	local script_file_dst="${SDCARD}/etc/initramfs-tools/scripts/init-premount/usbgadget.sh"
 	cp "${script_file_src}" "${script_file_dst}"
 	chmod +x "${script_file_dst}"
