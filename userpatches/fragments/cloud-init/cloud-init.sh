@@ -21,7 +21,7 @@ export KERNEL_EXTRA_CMDLINE_SD="oldskool.boottype=sd"     # Extra kernel cmdline
 export KERNEL_EXTRA_CMDLINE_EMMC="oldskool.boottype=emmc" # Extra kernel cmdline to add to emmc boot, after jumpstart.
 
 # enable for debugging, package list assembly can be confusing.
-export DEBUG_PACKAGE_LISTS=true
+export DEBUG_PACKAGE_LISTS=false
 
 # This runs after install_common() and chroot_installpackages_local()
 # Inside customize_image(), before running the actual custom script.

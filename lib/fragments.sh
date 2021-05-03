@@ -117,15 +117,15 @@ initialize_fragment_manager() {
 
 		# determine the variables we'll pass to the hook function during execution.
 		# this helps the fragment author create fragments that are portable between userpatches and official Armbian.
-		local function_variables=""
-		function_variables="HOOK_POINT=\"${hook_point}\""
+		local common_function_vars=""
+		common_function_vars="HOOK_POINT=\"${hook_point}\""
 
 		# loop over the functions for this hook_point (keep a total for the hook point and a grand running total)
 		for hook_point_function in ${hook_point_functions}; do
 			hook_point_functions_counter=$((hook_point_functions_counter + 1))
 			hook_functions_counter=$((hook_functions_counter + 1))
 		done
-		function_variables="${function_variables} HOOK_POINT_TOTAL_FUNCS=\"${hook_point_functions_counter}\""
+		common_function_vars="${common_function_vars} HOOK_POINT_TOTAL_FUNCS=\"${hook_point_functions_counter}\""
 
 		echo "-- hook_point: ${hook_point} will run ${hook_point_functions_counter} functions: ${hook_point_functions}" >>"${FRAGMENT_MANAGER_LOG_FILE}"
 		local temp_source_file_for_hook_point="${SRC}"/.tmp/fragment_function_definition.sh
@@ -143,19 +143,28 @@ FUNCTION_DEFINITION_HEADER
 
 		for hook_point_function in ${hook_point_functions}; do
 			hook_point_functions_loop_counter=$((hook_point_functions_loop_counter + 1))
-			local hook_point_function_variables="${function_variables}" # start with common vars... (eg: HOOK_POINT_TOTAL_FUNCS)
+			
+			# prepare the call context
+			local hook_point_function_variables="${common_function_vars}" # start with common vars... (eg: HOOK_POINT_TOTAL_FUNCS)
 			# add the contextual fragment info for the function (eg, FRAGMENT_DIR)
 			hook_point_function_variables="${hook_point_function_variables} ${fragment_function_info["${hook_point}${hook_fragment_delimiter}${hook_point_function}"]}"
 			# add the current execution counter, so the fragment author can know in which order it is being actually called
 			hook_point_function_variables="${hook_point_function_variables} HOOK_ORDER=\"${hook_point_functions_loop_counter}\""
+			
+			# add it to our (not the call site!) environment. if we export those in the call site, the stack is corrupted.
+			# shellcheck disable=SC2086
+			# shellcheck disable=SC2090
+			local ${hook_point_function_variables}
+			
 			# output the call, passing arguments, and also logging the output to the fragments log.
-			# @TODO: better error handling. we have a stupendous opportunity to 'set -e' here, and 'set +e' after, so that fragment authors are encouraged to write error handling code
-			cat <<FUNCTION_DEFINITION_CALL >>"${temp_source_file_for_hook_point}"
-			display_alert "Hook ${hook_point} ${hook_point_functions_loop_counter}/${hook_point_functions_counter}" "${hook_point_function}" "info"
+			# attention: don't pipe here (eg, capture output), otherwise hook function cant modify the environment (which is mostly the point)
+			# @TODO: better error handling. we have a good opportunity to 'set -e' here, and 'set +e' after, so that fragment authors are encouraged to write error-free handling code
+			cat <<FUNCTION_DEFINITION_CALLSITE >>"${temp_source_file_for_hook_point}"
+			display_alert "Hook ${hook_point}" "${hook_point_functions_loop_counter}/${hook_point_functions_counter} ${FRAGMENT:-unknown} ${hook_point_function}" ""
 			echo "*** *** Fragment-managed hook starting ${hook_point_functions_loop_counter}/${hook_point_functions_counter} '${hook_point}${hook_fragment_delimiter}${hook_point_function}':" >>"\${FRAGMENT_MANAGER_LOG_FILE}"
-			${hook_point_function_variables} ${hook_point}${hook_fragment_delimiter}${hook_point_function} "\$@" | tee -a "\${FRAGMENT_MANAGER_LOG_FILE}"
+			${hook_point_function_variables} ${hook_point}${hook_fragment_delimiter}${hook_point_function} "\$@"
 			echo "*** *** Fragment-managed hook finished ${hook_point_functions_loop_counter}/${hook_point_functions_counter} '${hook_point}${hook_fragment_delimiter}${hook_point_function}':" >>"\${FRAGMENT_MANAGER_LOG_FILE}"
-FUNCTION_DEFINITION_CALL
+FUNCTION_DEFINITION_CALLSITE
 		done
 
 		cat <<FUNCTION_DEFINITION_FOOTER >>"${temp_source_file_for_hook_point}"
@@ -167,7 +176,6 @@ FUNCTION_DEFINITION_FOOTER
 		unset hook_point_functions hook_point_functions_sortname_to_realname hook_point_functions_realname_to_sortname
 
 		# log what was produced in our own debug logfile
-		#[[ -f /usr/bin/pygmentize ]] && /usr/bin/pygmentize "${temp_source_file_for_hook_point}" >>"${FRAGMENT_MANAGER_LOG_FILE}"
 		cat "${temp_source_file_for_hook_point}" >>"${FRAGMENT_MANAGER_LOG_FILE}"
 
 		# source the generated function.

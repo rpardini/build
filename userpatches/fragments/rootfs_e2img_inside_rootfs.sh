@@ -1,5 +1,3 @@
-display_alert "Activating fragment" "fragment-include-rootfs-ext4-dump-inside-rootfs-itself" "info"
-
 config_prepare_image_size__rootfs_predict_image_size() {
 	display_alert "Current rootfs size in MiB" "${rootfs_size}" "info"
 

@@ -1,5 +1,3 @@
-display_alert "Activating fragment" "fragment-be-more-like-ubuntu-cloud" "info"
-
 # This is run inside the chroot building the bsp (armbian-config) package.
 # Stuff done here will persist across reinstalls of the bsp package.
 # Stuff done in image_tweaks_pre_customize() only applies to rootfs on the SD card.
