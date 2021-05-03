@@ -294,8 +294,10 @@ install_common()
 		[[ $INSTALL_HEADERS == yes ]] && install_deb_chroot "linux-headers-${BRANCH}-${LINUXFAMILY}" "remote"
 	fi
 	
-	# hook, allow config to do more with the installed kernel/headers
-	[[ $(type -t config_post_install_kernel_debs) == function ]] && config_post_install_kernel_debs
+	call_hook_point "post_install_kernel_debs" "config_post_install_kernel_debs" << 'MARKDOWN_DOCS_FOR_HOOK'
+*allow config to do more with the installed kernel/headers*
+Called after packages, u-boot, kernel and headers installed in the chroot, but before the BSP is installed.
+MARKDOWN_DOCS_FOR_HOOK
 
 	# install board support packages
 	if [[ "${REPOSITORY_INSTALL}" != *bsp* ]]; then
@@ -373,8 +375,10 @@ install_common()
 	# copy boot splash images
 	cp "${SRC}"/packages/blobs/splash/armbian-u-boot.bmp "${SDCARD}"/boot/boot.bmp
 
-	# execute $LINUXFAMILY-specific tweaks
-	[[ $(type -t family_tweaks) == function ]] && family_tweaks
+	call_hook_point "family_tweaks" << 'MARKDOWN_DOCS_FOR_HOOK'
+*execute $LINUXFAMILY-specific tweaks*
+@TODO: docs missing
+MARKDOWN_DOCS_FOR_HOOK
 
 	# enable additional services
 	chroot "${SDCARD}" /bin/bash -c "systemctl --no-reload enable armbian-firstrun.service >/dev/null 2>&1"
@@ -675,7 +679,9 @@ post_debootstrap_tweaks()
 	chroot "${SDCARD}" /bin/bash -c "dpkg-divert --quiet --local --rename --remove /sbin/start-stop-daemon"
 	rm -f "${SDCARD}"/usr/sbin/policy-rc.d "${SDCARD}/usr/bin/${QEMU_BINARY}"
 
-	# delegate back to config
-	[[ $(type -t config_post_debootstrap_tweaks) == function ]] && config_post_debootstrap_tweaks
+	call_hook_point "config_post_debootstrap_tweaks" << 'MARKDOWN_DOCS_FOR_HOOK'
+*delegate back to config*
+@TODO: docs missing
+MARKDOWN_DOCS_FOR_HOOK
 
 }

@@ -75,8 +75,6 @@ source "${SRC}"/lib/general.sh							# general functions
 # shellcheck source=chroot-buildpackages.sh
 source "${SRC}"/lib/chroot-buildpackages.sh					# building packages in chroot
 
-initialize_fragment_manager
-
 # compress and remove old logs
 mkdir -p "${DEST}"/debug
 (cd "${DEST}"/debug && tar -czf logs-"$(<timestamp)".tgz ./*.log) > /dev/null 2>&1
@@ -378,8 +376,10 @@ else
 
 fi
 
-# give config a chance modify CTHREADS programatically. A build server may work beter with hyperthreads-1 for example.
-[[ $(type -t config_post_determine_cthreads) == function ]] && config_post_determine_cthreads
+call_hook_point "post_determine_cthreads" "config_post_determine_cthreads" << 'POST_DETERMINE_CTHREADS'
+*give config a chance modify CTHREADS programatically. A build server may work better with hyperthreads-1 for example.*
+Called early, before any compilation work starts.
+POST_DETERMINE_CTHREADS
 
 if [[ $BETA == yes ]]; then
 	IMAGE_TYPE=nightly
@@ -513,9 +513,12 @@ else
 	display_alert "File name" "${CHOSEN_KERNEL}_${REVISION}_${ARCH}.deb" "info"
 fi
 
-# hook for function to run after build, i.e. to change owner of $SRC
-# NOTE: this will run only if there were no errors during build process
-[[ $(type -t run_after_build) == function ]] && run_after_build || true
+call_hook_point "run_after_build"  << 'POST_DETERMINE_CTHREADS'
+*hook for function to run after build, i.e. to change owner of `$SRC`*
+Really one of the last hooks ever called. The build has ended.
+NOTE: this will run only if there were no errors during build process
+POST_DETERMINE_CTHREADS
+
 
 end=$(date +%s)
 runtime=$(((end-start)/60))

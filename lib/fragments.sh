@@ -1,7 +1,34 @@
 # global variables managing the state of the fragment manager. treat as private.
-declare -A fragment_function_info     # maps a function name to a string with info about the defining fragment
-declare -A fragment_defined_functions # maps a fragment name to a list of functions defined in it # @TODO: populate
-declare -A fragment_defined_variables # maps a fragment name to a list of variables exported in it # @TODO: populate
+declare -A fragment_function_info                # maps a function name to a string with info about the defining fragment
+declare -A fragment_defined_functions            # maps a fragment name to a list of functions defined in it # @TODO: populate
+declare -A fragment_defined_variables            # maps a fragment name to a list of variables exported in it # @TODO: populate
+declare -i initialize_fragment_manager_counter=0 # how many times has the fragment manager initialized?
+
+# This is a helper function for calling hooks.
+# It follows the pattern long used in the codebase for hook-like behaviour:
+#    [[ $(type -t name_of_hook_function) == function ]] && name_of_hook_function
+# but with the following added behaviors:
+# 1) it allows for many arguments, and will treat each as a hook point.
+#    this allows for easily kept backwards compatibility when renaming hooks, for example.
+# 2) it will read the stdin and assume it's documentation for the hook point.
+#    combined with heredoc in the call site, it allows for inline documentation about the hook
+# notice: this is not involved in how the hook functions came to be. read below for that.
+call_hook_point() {
+	# First, consume the stdin and write docs...
+	cat <<EOD >>"${FRAGMENT_MANAGER_DOCS_FILE}"
+## Hook: \`$1\`
+### Description
+$(cat -)
+### Names:
+$(for hook_name in "$@"; do echo "- \`${hook_name}\`"; done; echo "")
+EOD
+	# Then call the hooks, if they are defined as functions.
+	for hook_name in "$@"; do
+		# Log to the fragment log that the hook is starting...
+		echo "-- hook being called: ${hook_name}" >>"${FRAGMENT_MANAGER_LOG_FILE}"
+		[[ $(type -t ${hook_name}) == function ]] && { ${hook_name}; }
+	done
+}
 
 # what this does is a lot of bash mumbo-jumbo to find all board-,family-,config- or user-defined hook points.
 # it will then compose a full hook point (function) that calls all the implementing hooks.
@@ -11,6 +38,8 @@ declare -A fragment_defined_variables # maps a fragment name to a list of variab
 # a marker in the function names, namely "__" (two underscores) to determine the hook point.
 initialize_fragment_manager() {
 	local hook_fragment_delimiter="__"
+
+	export initialize_fragment_manager_counter=$((initialize_fragment_manager_counter + 1))
 
 	# log whats happening.
 	echo "-- initialize_fragment_manager() called; produced functions below." >>"${FRAGMENT_MANAGER_LOG_FILE}"
@@ -66,7 +95,7 @@ initialize_fragment_manager() {
 		# - define call-specific environment variables, to help fragment authors to write portable fragments (eg: FRAGMENT_DIR)
 		cat <<FUNCTION_DEFINITION_SOURCE | tr "\t" " " >"${temp_source_file_for_hook_point}"
 		${hook_point}() {
-			display_alert "Fragment-managed hook starting" "${hook_point}: will run ${hook_point_functions}" "wrn"
+			display_alert "Fragment-managed hook starting" "${hook_point}: will run ${hook_point_functions}" "wrn" >>"${FRAGMENT_MANAGER_LOG_FILE}"
 		$(
 			for hook_point_function in ${hook_point_functions}; do
 				function_variables="${function_variables} ${fragment_function_info["${hook_point}${hook_fragment_delimiter}${hook_point_function}"]} HOOK_POINT_FUNCTION=\"${hook_point_function}\""
@@ -75,7 +104,7 @@ initialize_fragment_manager() {
 				echo "		"
 			done
 		)
-			display_alert "Fragment-managed hook ending" "${hook_point}: has run ${hook_point_functions}" "wrn"
+			display_alert "Fragment-managed hook ending" "${hook_point}: has run ${hook_point_functions}" "wrn" >>"${FRAGMENT_MANAGER_LOG_FILE}"
 		} # end ${hook_point}() function
 FUNCTION_DEFINITION_SOURCE
 
@@ -109,6 +138,12 @@ finish_fragment_manager() {
 add_fragment() {
 	local fragment_name="$1"
 
+	# first a check, has the fragment manager already initialized? then it is too late to add_fragment()
+	if [[ ${initialize_fragment_manager_counter} -gt 0 ]]; then
+		echo "ERR: Fragment problem -- already initialized -- too late to add '${fragment_name}' by ${BASH_SOURCE[1]}" | tee -a "${FRAGMENT_MANAGER_LOG_FILE}"
+		exit 2
+	fi
+
 	local fragment_dir
 	local fragment_file
 	local fragment_file_in_dir
@@ -131,9 +166,9 @@ add_fragment() {
 	done
 
 	# After that, we should either have fragment_file and fragment_dir, or throw, since we can't find the fragment.
-	# It would be very important to be able to show where the origin of the problem is (who called add_fragment?) but that is left for later.
+	# @TODO: It would be very important to be able to show where the origin of the problem is (who called add_fragment?) but that is left for later.
 	if [[ ! -f "${fragment_file}" ]]; then
-		display_alert "Fragment problem" "cant find fragment '${fragment_name}' anywhere." "err" | tee -a "${FRAGMENT_MANAGER_LOG_FILE}"
+		echo "ERR: Fragment problem -- cant find fragment '${fragment_name}' anywhere." | tee -a "${FRAGMENT_MANAGER_LOG_FILE}"
 		return 1
 	fi
 
@@ -159,11 +194,11 @@ add_fragment() {
 
 	# iterate over defined functions, store them in global associative array fragment_function_info
 	for newly_defined_function in ${new_function_list}; do
-		display_alert "fragment: ${fragment_name}" "defined function ${newly_defined_function}" "info" >>"${FRAGMENT_MANAGER_LOG_FILE}"
+		echo "fragment: ${fragment_name} defined function ${newly_defined_function}" >>"${FRAGMENT_MANAGER_LOG_FILE}"
 		fragment_function_info["${newly_defined_function}"]="FRAGMENT=\"${fragment_name}\" FRAGMENT_DIR=\"${fragment_dir}\" FRAGMENT_FILE=\"${fragment_file}\""
 	done
 
-	display_alert "Fragment activated" "'${fragment_name}': from ${fragment_file}" "info" >>"${FRAGMENT_MANAGER_LOG_FILE}"
+	echo "Fragment activated '${fragment_name}': from ${fragment_file}" >>"${FRAGMENT_MANAGER_LOG_FILE}"
 }
 
 # Thank you, dear reviewer, for reading this long. You're a hero.
@@ -175,3 +210,7 @@ export FRAGMENT_MANAGER_LOG_FILE="${SRC}/.tmp/fragments.log"
 
 # globally initialize the fragments log.
 echo "-- lib/fragments.sh included. addition logs will be below, followed by the debug generated by the initialize_fragment_manager() function." >"${FRAGMENT_MANAGER_LOG_FILE}"
+
+# we also generate documentation about the hook points.
+export FRAGMENT_MANAGER_DOCS_FILE="${SRC}/.tmp/fragment_auto_docs.md"
+echo "# Armbian build system extensibility" >"${FRAGMENT_MANAGER_DOCS_FILE}"

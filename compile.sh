@@ -247,7 +247,7 @@ fi
 CONFIG_PATH=$(dirname "${CONFIG_FILE}")
 
 # Include/source the fragment manager library at this point, before sourcing the config.
-# This does nothing, except allow the config to call ensure_fragment()
+# This should do nothing, except allow the config to call add_fragment()
 # shellcheck source=fragments.sh
 source "${SRC}"/lib/fragments.sh
 

@@ -84,6 +84,7 @@ compile_atf()
 	[[ ${PIPESTATUS[0]} -ne 0 ]] && exit_with_error "ATF compilation failed"
 
 	[[ $(type -t atf_custom_postprocess) == function ]] && atf_custom_postprocess
+	# @TODO: convert to call_hook_point
 
 	atftempdir=$(mktemp -d)
 	chmod 700 ${atftempdir}
@@ -236,6 +237,7 @@ compile_uboot()
 		[[ ${PIPESTATUS[0]} -ne 0 ]] && exit_with_error "U-boot compilation failed"
 
 		[[ $(type -t uboot_custom_postprocess) == function ]] && uboot_custom_postprocess
+		# @TODO: convert to call_hook_point
 
 		# copy files to build directory
 		for f in $target_files; do
