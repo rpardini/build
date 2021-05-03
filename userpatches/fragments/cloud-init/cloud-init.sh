@@ -4,6 +4,8 @@
 # it can be used to setup users, passwords, ssh keys, install packages, install and delegate to ansible, etc.
 # cloud providers allow setting user-data, but provide network-config and meta-data themselves; here we try
 
+## @TODO: this is not really working... cloud-init is not included or even called?
+
 # Config for cloud-init.
 export CLOUD_INIT_USER_DATA_URL="files"                   # "files" to use config files, or an URL to go straight to it
 export CLOUD_INIT_CONFIG_LOCATION="/boot"                 # where on the sdcard c-i will look for user-data, network-config, meta-data files
@@ -19,15 +21,13 @@ export KERNEL_EXTRA_CMDLINE_SD="oldskool.boottype=sd"     # Extra kernel cmdline
 export KERNEL_EXTRA_CMDLINE_EMMC="oldskool.boottype=emmc" # Extra kernel cmdline to add to emmc boot, after jumpstart.
 
 # enable for debugging, package list assembly can be confusing.
-export DEBUG_PACKAGE_LISTS=false
+export DEBUG_PACKAGE_LISTS=true
 
 # This runs after install_common() and chroot_installpackages_local()
 # Inside customize_image(), before running the actual custom script.
 # We dont use the custom script so actual image customization is done here
 # not clear what happens after this? see below
 image_tweaks_pre_customize__cloud_init() {
-	display_alert "Custom config stage" "image_tweaks_pre_customize__cloud_init" "info"
-
 	echo -e "# configure cloud-init for NoCloud\ndatasource_list: [ NoCloud, None ]\ndatasource:\n  NoCloud: \n    dsmode: local\n    seedfrom: /boot/" >>"${SDCARD}"/etc/cloud/cloud.cfg.d/99-armbian.cfg
 
 	cp "${FRAGMENT_DIR}"/config/meta-data.yaml "${SDCARD}${CLOUD_INIT_CONFIG_LOCATION}"/meta-data
@@ -114,11 +114,13 @@ user_config_post_aggregate_packages__confirm_cloudinit_packages() {
 		display_alert "Package found OK." "cloud-init"
 	else
 		display_alert "Package not found in package list." "cloud-init" "wrn"
+		read
 	fi
 
 	# could be nice checking that network-manager is NOT there too
 	if [[ ${PACKAGE_LIST} == *"network-manager"* ]]; then
 		display_alert "Package found in package list -- should not be!" "network-manager" "wrn"
+		read
 	else
 		display_alert "Package not being installed" "network-manager"
 	fi
@@ -134,8 +136,6 @@ user_config_post_aggregate_packages__confirm_cloudinit_packages() {
 # -> which is called by  debootstrap_ng() before prepare_partitions()/create_image()
 # -> tmpfs is still going at this point.
 config_post_debootstrap_tweaks__hack_armbianEnv_ci_args() {
-	display_alert "Custom config stage" "config_post_debootstrap_tweaks__hack_armbianEnv_ci_args" "info"
-
 	# This really is used for jumpstart and emmc, no way to actually discern yet.
 	# shellcheck disable=SC2129
 	echo "extraboardargs=${KERNEL_EXTRA_CMDLINE_SD}" >>"${SDCARD}"/boot/armbianEnv.txt
@@ -150,8 +150,6 @@ config_post_debootstrap_tweaks__hack_armbianEnv_ci_args() {
 # -> which is called by  debootstrap_ng() before prepare_partitions()/create_image()
 # -> tmpfs is still going at this point.
 config_post_debootstrap_tweaks__make_sure_hostapd_behaves() {
-	display_alert "Custom config stage" "config_post_debootstrap_tweaks__make_sure_hostapd_behaves" "info"
-
 	# hostapd REALLY should not be here @TODO: find out really what is installing it and remove this
 	[[ -f "${SDCARD}"/etc/systemd/system/multi-user.target.wants/hostapd.service ]] &&
 		rm -f "${SDCARD}"/etc/systemd/system/multi-user.target.wants/hostapd.service
@@ -173,8 +171,6 @@ config_post_debootstrap_tweaks__make_sure_hostapd_behaves() {
 # -> which is called by  debootstrap_ng() before prepare_partitions()/create_image()
 # -> tmpfs is still going at this point.
 config_post_debootstrap_tweaks__restore_systemd_resolved_from_resolvconf_and_armbian() {
-	display_alert "Custom config stage" "config_post_debootstrap_tweaks__restore_systemd_resolved_from_resolvconf_and_armbian" "info"
-
 	# do away with the resolv.conf leftover in the image.
 	# set up systemd-resolved which is the way cloud images generally work
 	rm -f "${SDCARD}"/etc/resolv.conf
@@ -182,14 +178,12 @@ config_post_debootstrap_tweaks__restore_systemd_resolved_from_resolvconf_and_arm
 }
 
 config_pre_install_distribution_specific__preserve_pristine_etc_systemd() {
-	display_alert "Custom config stage" "config_pre_install_distribution_specific__preserve_pristine_etc_systemd" "info"
 	# Preserve some stuff from systemd that Armbian build will touch. This way we can let armbian do its thing
 	# and then just revert back to the preserved state.
 	cp -rp "${SDCARD}"/etc/systemd "${SDCARD}"/etc/systemd.orig
 }
 
 config_pre_customize_image__restore_preserved_systemd_and_netplan_stuff() {
-	display_alert "Custom config stage" "config_pre_customize_image__restore_preserved_systemd_and_netplan_stuff" "info"
 	# Restore some stuff we preserved in config_pre_install_distribution_specific()
 	cp -p "${SDCARD}"/etc/systemd.orig/journald.conf "${SDCARD}"/etc/systemd/journald.conf
 	cp -p "${SDCARD}"/etc/systemd.orig/resolved.conf "${SDCARD}"/etc/systemd/resolved.conf

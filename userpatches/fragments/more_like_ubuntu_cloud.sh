@@ -4,8 +4,6 @@ display_alert "Activating fragment" "fragment-be-more-like-ubuntu-cloud" "info"
 # Stuff done here will persist across reinstalls of the bsp package.
 # Stuff done in image_tweaks_pre_customize() only applies to rootfs on the SD card.
 config_tweaks_bsp__be_more_like_ubuntu_cloud() {
-	display_alert "Custom config stage" "config_tweaks_bsp__be_more_like_ubuntu_cloud" "info"
-
 	# remove a bunch of stuff from bsp so it behaves more like regular ubuntu
 	rm -f "$destination"/etc/apt/apt.conf.d/02-armbian-compress-indexes
 

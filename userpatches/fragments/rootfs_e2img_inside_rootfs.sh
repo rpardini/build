@@ -1,7 +1,6 @@
 display_alert "Activating fragment" "fragment-include-rootfs-ext4-dump-inside-rootfs-itself" "info"
 
 config_prepare_image_size__rootfs_predict_image_size() {
-	display_alert "Custom config stage" "config_prepare_image_size" "info"
 	display_alert "Current rootfs size in MiB" "${rootfs_size}" "info"
 
 	# For this to work we need a very big image size. We''ll fill it with itself, so get the size and double it at least.
@@ -12,9 +11,6 @@ config_prepare_image_size__rootfs_predict_image_size() {
 }
 
 config_pre_umount_final_image__prepare_rootfs_inside_rootfs() {
-	display_alert "Custom config stage" "config_pre_umount_final_image__prepare_rootfs_inside_rootfs" "info"
-	# # we can either umount/remount here, or remount/umount below
-
 	# For sure there is an Armbian env (LOOP_X?) but I didnt figure it out a the time.
 	export ROOT_LOOP_DEV_PART=$(mount | grep "${MOUNT}" | grep ext4 | cut -d " " -f 1)
 	display_alert "Got loop for root partition" "${ROOT_LOOP_DEV_PART}" "info"
@@ -24,8 +20,6 @@ config_pre_umount_final_image__prepare_rootfs_inside_rootfs() {
 # Also, xz has a ball finding double blocks in the final image.
 
 config_post_umount_final_image__rootfs_e2img_inside_rootfs() {
-	display_alert "Custom config stage" "config_post_umount_final_image__rootfs_e2img_inside_rootfs" "info"
-
 	# to make sure its unmounted
 	while grep -Eq '(${MOUNT}|${DESTIMG})' /proc/mounts; do
 		display_alert "Waiting for unmount...." "${MOUNT}" "info"

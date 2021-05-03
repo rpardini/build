@@ -4,7 +4,6 @@
 # ifconfig usb0 up 172.16.42.2 netmask 255.255.255.0; sysctl net.ipv4.ip_forward=1; iptables -P FORWARD ACCEPT; iptables -A POSTROUTING -t nat -j MASQUERADE -s 172.16.42.0/24
 
 config_pre_customize_image__inject_initramfs_usb_gadget() {
-	display_alert "Custom config stage" "config_pre_customize_image__inject_initramfs_usb_gadget" "info"
 	local script_file_src="${FRAGMENT_DIR}/init-premount/usbgadget.sh"
 	local script_file_dst="${SDCARD}/etc/initramfs-tools/scripts/init-premount/usbgadget.sh"
 	cp "${script_file_src}" "${script_file_dst}"
@@ -12,7 +11,6 @@ config_pre_customize_image__inject_initramfs_usb_gadget() {
 }
 
 user_config__add_avahi_daemon() {
-	display_alert "Custom config stage" "user_config__add_avahi_daemon" "info"
 	export PACKAGE_LIST_ADDITIONAL="${PACKAGE_LIST_ADDITIONAL} avahi-daemon"
 }
 

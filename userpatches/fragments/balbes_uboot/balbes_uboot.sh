@@ -54,13 +54,11 @@ export SD_ROOT_DEV="UUID=${SD_ROOT_DEV_UUID}"
 
 # last chance to modify mkopts and such, add labels to partitions
 prepare_partitions_custom__add_uuid_to_rootfs() {
-	display_alert "Custom config stage" "prepare_partitions_custom" "info"
 	display_alert "prepare_partitions_custom adding to mfks ext4" "-U ${SD_ROOT_DEV_UUID}" "info"
 	mkopts[ext4]="-U ${SD_ROOT_DEV_UUID} ${mkopts[ext4]}"
 }
 
 user_config__decompress_balbes_blobs() {
-	display_alert "Custom config stage" "user_config__decompress_blobs" "info"
 	[[ ! -f "$USERPATCHES_PATH/overlay/jumpstart/sd-root-root/balbe_bootloader_sd_4mb.img" ]] &&
 		unxz -k "$USERPATCHES_PATH/overlay/jumpstart/sd-root-root/balbe_bootloader_sd_4mb.img.xz"
 
@@ -72,8 +70,6 @@ user_config__decompress_balbes_blobs() {
 }
 
 image_tweaks_pre_customize__add_balbes_uboot() {
-	display_alert "Custom config stage" "image_tweaks_pre_customize__jumpstart" "info"
-
 	##### # Expand the binaries.
 	##### # Right now there is a 50mb blob of balbes150's last working build.
 	##### # This should be replaced with a torrent download or something like that.
