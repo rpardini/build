@@ -513,11 +513,11 @@ else
 	display_alert "File name" "${CHOSEN_KERNEL}_${REVISION}_${ARCH}.deb" "info"
 fi
 
-call_hook_point "run_after_build"  << 'POST_DETERMINE_CTHREADS'
+call_hook_point "run_after_build"  << 'MARKDOWN_DOCUMENTATION'
 *hook for function to run after build, i.e. to change owner of `$SRC`*
 Really one of the last hooks ever called. The build has ended.
 NOTE: this will run only if there were no errors during build process
-POST_DETERMINE_CTHREADS
+MARKDOWN_DOCUMENTATION
 
 
 end=$(date +%s)

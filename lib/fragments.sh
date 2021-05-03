@@ -8,13 +8,13 @@ declare -i initialize_fragment_manager_counter=0 # how many times has the fragme
 # but with the following added behaviors:
 # 1) it allows for many arguments, and will treat each as a hook point.
 #    this allows for easily kept backwards compatibility when renaming hooks, for example.
-# 2) it will read the stdin and assume it's documentation for the hook point.
-#    combined with heredoc in the call site, it allows for inline documentation about the hook
+# 2) it will read the stdin and assume it's (Markdown) documentation for the hook point.
+#    combined with heredoc in the call site, it allows for "inline" documentation about the hook
 # notice: this is not involved in how the hook functions came to be. read below for that.
 call_hook_point() {
 	# First, consume the stdin and write docs...
 	write_hook_documentation_fragment "$@"
-	# Then call the hooks, if they are defined as functions.
+	# Then call the hooks, if they are defined.
 	for hook_name in "$@"; do
 		# Log to the fragment log that the hook is starting...
 		echo "-- hook being called: ${hook_name}" >>"${FRAGMENT_MANAGER_LOG_FILE}"
@@ -38,10 +38,11 @@ EOD
 }
 
 # what this does is a lot of bash mumbo-jumbo to find all board-,family-,config- or user-defined hook points.
+# the meat of this is 'compgen -A function', which is bash builtin that lists all defined functions.
 # it will then compose a full hook point (function) that calls all the implementing hooks.
 # this centralized function will then be called by the regular Armbian build system, which is oblivious to how
-# this function came to be.
-# to avoid hardcoding the list of hook-points (eg: user_config, image_tweaks_pre_customize, etc) we use
+# it came to be. (although it is encouraged to call hook points via call_hook_point() above)
+# to avoid hard coding the list of hook-points (eg: user_config, image_tweaks_pre_customize, etc) we use
 # a marker in the function names, namely "__" (two underscores) to determine the hook point.
 initialize_fragment_manager() {
 	local hook_fragment_delimiter="__"
@@ -80,32 +81,42 @@ initialize_fragment_manager() {
 		# for each hook_point, obtain the list of implementing functions.
 		# the sort order here is (very) relevant, since it determines final execution order.
 		# so the name of the functions actually determine the ordering.
-		local hook_point_functions hook_point_functions_pre_sort hook_point_functions_sorted_sortnames
+		local hook_point_functions hook_point_functions_pre_sort hook_point_functions_sorted_by_sort_id
+
+		# Sorting. Multiple fragments (or even the same fragment twice) can implement the same hook point
+		# as long as they have different function names (the part after the double underscore __).
+		# the order those will be called depends on the name; eg:
+		# 'hook_point__033_be_awesome()' would be caller sooner than 'hook_point__799_be_even_more_awesome()'
+		# independent from where they were defined or in which order the fragments containing them were added.
+		# since requiring specific ordering could hamper portability, we reward fragment authors who
+		# don't mind ordering for writing just: 'hook_point__be_just_awesome()' which is automatically rewritten
+		# as 'hook_point__500_be_just_awesome()'.
+		# fragment authors who care about ordering can use the 3-digit number, and use the context variables
+		# HOOK_ORDER and HOOK_POINT_TOTAL_FUNCS to confirm in which order they're being run.
 
 		# gather the real names of the functions (after the delimiter).
 		hook_point_functions_pre_sort="$(compgen -A function | grep "^${hook_point}${hook_fragment_delimiter}" | awk -F "${hook_fragment_delimiter}" '{print $2}' | xargs echo -n)"
 		echo "--- hook_point_functions_pre_sort: ${hook_point_functions_pre_sort}" >>"${FRAGMENT_MANAGER_LOG_FILE}"
 
 		# add "500_" to the names of function that do NOT start with a number.
-		# keep a reference of the new names to the old names (we'll sort on the new, but invoke the old)
+		# keep a reference from the new names to the old names (we'll sort on the new, but invoke the old)
 		declare -A hook_point_functions_sortname_to_realname
 		declare -A hook_point_functions_realname_to_sortname
 		for hook_point_function_realname in ${hook_point_functions_pre_sort}; do
-			local sortname
-			sortname="${hook_point_function_realname}"
-			[[ ! $sortname =~ ^[0-9] ]] && sortname="500_${sortname}"
-			hook_point_functions_sortname_to_realname[${sortname}]="${hook_point_function_realname}"
-			hook_point_functions_realname_to_sortname[${hook_point_function_realname}]="${sortname}"
+			local sort_id="${hook_point_function_realname}"
+			[[ ! $sort_id =~ ^[0-9] ]] && sort_id="500_${sort_id}"
+			hook_point_functions_sortname_to_realname[${sort_id}]="${hook_point_function_realname}"
+			hook_point_functions_realname_to_sortname[${hook_point_function_realname}]="${sort_id}"
 		done
 
-		# actually sort the sortnames...
+		# actually sort the sort_id's...
 		# shellcheck disable=SC2086
-		hook_point_functions_sorted_sortnames="$(echo "${hook_point_functions_realname_to_sortname[*]}" | tr " " "\n" | LC_ALL=C sort ${FUNCTION_SORT_OPTIONS} | xargs echo -n)"
-		echo "--- hook_point_functions_sorted_sortnames: ${hook_point_functions_sorted_sortnames}" >>"${FRAGMENT_MANAGER_LOG_FILE}"
+		hook_point_functions_sorted_by_sort_id="$(echo "${hook_point_functions_realname_to_sortname[*]}" | tr " " "\n" | LC_ALL=C sort ${FUNCTION_SORT_OPTIONS} | xargs echo -n)"
+		echo "--- hook_point_functions_sorted_by_sort_id: ${hook_point_functions_sorted_by_sort_id}" >>"${FRAGMENT_MANAGER_LOG_FILE}"
 
 		# then map back to the real names, keeping the order..
 		hook_point_functions=""
-		for hook_point_function_sortname in ${hook_point_functions_sorted_sortnames}; do
+		for hook_point_function_sortname in ${hook_point_functions_sorted_by_sort_id}; do
 			hook_point_functions="${hook_point_functions} ${hook_point_functions_sortname_to_realname[${hook_point_function_sortname}]}"
 		done
 		# shellcheck disable=SC2086
@@ -117,8 +128,8 @@ initialize_fragment_manager() {
 
 		# determine the variables we'll pass to the hook function during execution.
 		# this helps the fragment author create fragments that are portable between userpatches and official Armbian.
-		local common_function_vars=""
-		common_function_vars="HOOK_POINT=\"${hook_point}\""
+		# shellcheck disable=SC2089
+		local common_function_vars="HOOK_POINT=\"${hook_point}\""
 
 		# loop over the functions for this hook_point (keep a total for the hook point and a grand running total)
 		for hook_point_function in ${hook_point_functions}; do
@@ -143,19 +154,19 @@ FUNCTION_DEFINITION_HEADER
 
 		for hook_point_function in ${hook_point_functions}; do
 			hook_point_functions_loop_counter=$((hook_point_functions_loop_counter + 1))
-			
+
 			# prepare the call context
 			local hook_point_function_variables="${common_function_vars}" # start with common vars... (eg: HOOK_POINT_TOTAL_FUNCS)
 			# add the contextual fragment info for the function (eg, FRAGMENT_DIR)
 			hook_point_function_variables="${hook_point_function_variables} ${fragment_function_info["${hook_point}${hook_fragment_delimiter}${hook_point_function}"]}"
 			# add the current execution counter, so the fragment author can know in which order it is being actually called
 			hook_point_function_variables="${hook_point_function_variables} HOOK_ORDER=\"${hook_point_functions_loop_counter}\""
-			
+
 			# add it to our (not the call site!) environment. if we export those in the call site, the stack is corrupted.
 			# shellcheck disable=SC2086
 			# shellcheck disable=SC2090
 			local ${hook_point_function_variables}
-			
+
 			# output the call, passing arguments, and also logging the output to the fragments log.
 			# attention: don't pipe here (eg, capture output), otherwise hook function cant modify the environment (which is mostly the point)
 			# @TODO: better error handling. we have a good opportunity to 'set -e' here, and 'set +e' after, so that fragment authors are encouraged to write error-free handling code
@@ -172,7 +183,7 @@ FUNCTION_DEFINITION_CALLSITE
 		} # end ${hook_point}() function
 FUNCTION_DEFINITION_FOOTER
 
-		# unsets
+		# unsets, lest the next loop inherits them
 		unset hook_point_functions hook_point_functions_sortname_to_realname hook_point_functions_realname_to_sortname
 
 		# log what was produced in our own debug logfile
@@ -187,13 +198,17 @@ FUNCTION_DEFINITION_FOOTER
 	display_alert "Fragment manager" "processed ${hook_points_counter} hook points and ${hook_functions_counter} hook functions" "info" | tee -a "${FRAGMENT_MANAGER_LOG_FILE}"
 }
 
+# why not eat our own dog food?
 # process everything that happened during fragment related activities
 # and write it to the log. also, move the log from the .tmp dir to its
-# final location. # @TODO: call it!
-finish_fragment_manager() {
-	# Move temporary log file over to final destination, and start writing to it instead.
-	mv -v "${FRAGMENT_MANAGER_LOG_FILE}" "${DEST}"/debug/fragments.log
+# final location. this will trigger a warning if run_after_build() is defined elsewhere.
+run_after_build__900_finish_fragment_manager() {
+	# Move temporary log file over to final destination, and start writing to it instead (although 900 is pretty late in the game)
+	mv "${FRAGMENT_MANAGER_LOG_FILE}" "${DEST}"/debug/
 	export FRAGMENT_MANAGER_LOG_FILE="${DEST}"/debug/fragments.log
+
+	# Move generated docs and example fragment too.
+	mv "${SRC}/.tmp/fragment_auto_docs.md" "${DEST}"/debug/
 }
 
 # can be called by board, family, config or user to make sure a fragment is included.
@@ -203,17 +218,13 @@ finish_fragment_manager() {
 # if not found will throw and abort compilation (or will it? no set -e no this codebase in general)
 add_fragment() {
 	local fragment_name="$1"
+	local fragment_dir fragment_file fragment_file_in_dir fragment_floating_file
 
-	# first a check, has the fragment manager already initialized? then it is too late to add_fragment()
+	# first a check, has the fragment manager already initialized? then it is too late to add_fragment(). bail.
 	if [[ ${initialize_fragment_manager_counter} -gt 0 ]]; then
 		echo "ERR: Fragment problem -- already initialized -- too late to add '${fragment_name}' by ${BASH_SOURCE[1]}" | tee -a "${FRAGMENT_MANAGER_LOG_FILE}"
 		exit 2
 	fi
-
-	local fragment_dir
-	local fragment_file
-	local fragment_file_in_dir
-	local fragment_floating_file
 
 	# there are many opportunities here. too many, actually. let userpatches override just some functions, etc.
 	for fragment_base_path in "${SRC}/userpatches/fragments" "${SRC}/fragments"; do
@@ -231,14 +242,14 @@ add_fragment() {
 		fi
 	done
 
-	# After that, we should either have fragment_file and fragment_dir, or throw, since we can't find the fragment.
-	# @TODO: It would be very important to be able to show where the origin of the problem is (who called add_fragment?) but that is left for later.
+	# After that, we should either have fragment_file and fragment_dir, or throw.
 	if [[ ! -f "${fragment_file}" ]]; then
-		echo "ERR: Fragment problem -- cant find fragment '${fragment_name}' anywhere." | tee -a "${FRAGMENT_MANAGER_LOG_FILE}"
+		echo "ERR: Fragment problem -- cant find fragment '${fragment_name}' anywhere - called by ${BASH_SOURCE[1]}" | tee -a "${FRAGMENT_MANAGER_LOG_FILE}"
 		return 1
 	fi
 
 	local before_function_list after_function_list new_function_list
+
 	# store a list of existing functions at this point, before sourcing the fragment.
 	before_function_list="$(compgen -A function)"
 
@@ -264,7 +275,6 @@ add_fragment() {
 	echo "Fragment activated '${fragment_name}': from ${fragment_file}" >>"${FRAGMENT_MANAGER_LOG_FILE}"
 }
 
-# Thank you, dear reviewer, for reading this long. You're a hero.
 # For the insanity above to (maybe) make sense to anyone we need logging. Unfortunately,
 # this runs super early (from compile.sh), and DEST is not defined yet; logs will still be moved away and compressed when this runs.
 # We cheat. That's why it's hidden down here. Sorry ;-)
