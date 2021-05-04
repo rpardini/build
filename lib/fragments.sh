@@ -171,11 +171,14 @@ FUNCTION_DEFINITION_HEADER
 			# attention: don't pipe here (eg, capture output), otherwise hook function cant modify the environment (which is mostly the point)
 			# @TODO: better error handling. we have a good opportunity to 'set -e' here, and 'set +e' after, so that fragment authors are encouraged to write error-free handling code
 			cat <<FUNCTION_DEFINITION_CALLSITE >>"${temp_source_file_for_hook_point}"
-			display_alert "Hook ${hook_point}" "${hook_point_functions_loop_counter}/${hook_point_functions_counter} ${FRAGMENT:-unknown} ${hook_point_function}" ""
+			display_alert "Hook ${hook_point}" "${hook_point_functions_loop_counter}/${hook_point_functions_counter} (frag:${FRAGMENT:-built-in}) ${hook_point_function}" ""
 			echo "*** *** Fragment-managed hook starting ${hook_point_functions_loop_counter}/${hook_point_functions_counter} '${hook_point}${hook_fragment_delimiter}${hook_point_function}':" >>"\${FRAGMENT_MANAGER_LOG_FILE}"
 			${hook_point_function_variables} ${hook_point}${hook_fragment_delimiter}${hook_point_function} "\$@"
 			echo "*** *** Fragment-managed hook finished ${hook_point_functions_loop_counter}/${hook_point_functions_counter} '${hook_point}${hook_fragment_delimiter}${hook_point_function}':" >>"\${FRAGMENT_MANAGER_LOG_FILE}"
 FUNCTION_DEFINITION_CALLSITE
+
+			# unset fragment vars for the next loop.
+			unset FRAGMENT FRAGMENT_DIR FRAGMENT_FILE
 		done
 
 		cat <<FUNCTION_DEFINITION_FOOTER >>"${temp_source_file_for_hook_point}"
