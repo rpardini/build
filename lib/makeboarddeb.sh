@@ -304,8 +304,15 @@ fi
 		cp "${SRC}"/packages/bsp/mpv/mpv_mainline.conf "${destination}"/etc/mpv/mpv.conf
 	fi
 
-	# execute $LINUXFAMILY-specific tweaks
-	[[ $(type -t family_tweaks_bsp) == function ]] && family_tweaks_bsp
+	call_hook_point "family_tweaks_bsp" << 'MARKDOWN_DOCS_FOR_HOOK'
+*execute $LINUXFAMILY-specific tweaks*
+This should be implemented by board or family to tweak the BSP.
+MARKDOWN_DOCS_FOR_HOOK
+
+	call_hook_point "config_tweaks_bsp" << 'MARKDOWN_DOCS_FOR_HOOK'
+*family_tweaks_bsp overrrides what is in the config, so give it a chance to override the family tweaks*
+This should be implemented by the config to tweak the BSP, after the board or family has had the chance to.
+MARKDOWN_DOCS_FOR_HOOK
 
 	# add some summary to the image
 	fingerprint_image "${destination}/etc/armbian.txt"
