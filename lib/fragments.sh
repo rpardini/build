@@ -2,9 +2,10 @@
 declare -A fragment_function_info                # maps a function name to a string with KEY=VALUEs information about the defining fragment
 declare -i initialize_fragment_manager_counter=0 # how many times has the fragment manager initialized?
 declare -A defined_hook_point_functions          # keeps a map of hook point functions that were defined and their fragment info
-declare -A actually_called_hook_point_functions  # keeps a map of hook point functions that were actually called and their source
+declare -A hook_point_function_trace_sources     # keeps a map of hook point functions that were actually called and their source
+declare -A hook_point_function_trace_lines       # keeps a map of hook point functions that were actually called and their source
 # configuration.
-export DEBUG_HOOKS=no                            # set to yes to log every hook function called to the main build log
+export DEBUG_HOOKS=no # set to yes to log every hook function called to the main build log
 
 # This is a helper function for calling hooks.
 # It follows the pattern long used in the codebase for hook-like behaviour:
@@ -179,7 +180,8 @@ FUNCTION_DEFINITION_HEADER
 			# attention: don't pipe here (eg, capture output), otherwise hook function cant modify the environment (which is mostly the point)
 			# @TODO: better error handling. we have a good opportunity to 'set -e' here, and 'set +e' after, so that fragment authors are encouraged to write error-free handling code
 			cat <<FUNCTION_DEFINITION_CALLSITE >>"${temp_source_file_for_hook_point}"
-			actually_called_hook_point_functions["${hook_point}${hook_fragment_delimiter}${hook_point_function}"]=\$BASH_SOURCE[2] # This is supposed to be called from call_hook_point() which calls this. Real caller is 2 up the stack.
+			hook_point_function_trace_sources["${hook_point}${hook_fragment_delimiter}${hook_point_function}"]="\${BASH_SOURCE[@]}"
+			hook_point_function_trace_lines["${hook_point}${hook_fragment_delimiter}${hook_point_function}"]="\${BASH_LINENO[@]}"
 			[[ "\${DEBUG_HOOKS}" == "yes" ]] && display_alert "Hook ${hook_point}" "${hook_point_functions_loop_counter}/${hook_point_functions_counter} (frag:${FRAGMENT:-built-in}) ${hook_point_function}" ""
 			echo "*** *** Fragment-managed hook starting ${hook_point_functions_loop_counter}/${hook_point_functions_counter} '${hook_point}${hook_fragment_delimiter}${hook_point_function}':" >>"\${FRAGMENT_MANAGER_LOG_FILE}"
 			${hook_point_function_variables} ${hook_point}${hook_fragment_delimiter}${hook_point_function} "\$@"
@@ -219,7 +221,7 @@ FUNCTION_DEFINITION_FOOTER
 # final location. this will make run_after_build() "hot" (eg, emit warnings)
 run_after_build__999_finish_fragment_manager() {
 	# export these maps, so the hook can access them and produce useful stuff.
-	export defined_hook_point_functions actually_called_hook_point_functions
+	export defined_hook_point_functions hook_point_function_trace_sources
 
 	# eat our own dog food, pt2.
 	call_hook_point "fragment_metadata_ready" <<'FRAGMENT_METADATA_READY'
@@ -233,11 +235,12 @@ Interesting stuff to process:
   - `${FRAGMENT_MANAGER_TMP_DIR}/hook_point.exports` contains _exported_ environment variables.
   - `${FRAGMENT_MANAGER_TMP_DIR}/hook_point.vars` contains _all_ environment variables.
 - `${defined_hook_point_functions}` is a map of _all_ the defined hook point functions and their fragment information.
-- `${actually_called_hook_point_functions}` is a map of all the hook point functions _that were really called during the build_ and their source information.
+- `${hook_point_function_trace_sources}` is a map of all the hook point functions _that were really called during the build_ and their BASH_SOURCE information.
+- `${hook_point_function_trace_lines}` is the same, but BASH_LINENO info.
 After this hook is done, the `${FRAGMENT_MANAGER_TMP_DIR}` will be removed.
 FRAGMENT_METADATA_READY
 
-	# Cleanup. Leave no trace... @TODO
+	# @TODO: enable. Cleanup. Leave no trace...
 	# [[ -d "${FRAGMENT_MANAGER_TMP_DIR}" ]] && rm -rf "${FRAGMENT_MANAGER_TMP_DIR}"
 
 	# Move temporary log file over to final destination, and start writing to it instead (although 999 is pretty late in the game)
