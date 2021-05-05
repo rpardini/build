@@ -22,8 +22,12 @@ call_hook_point() {
 
 	# Then a sanity check, hook points should only be invoked after the manager has initialized.
 	if [[ ${initialize_fragment_manager_counter} -lt 1 ]]; then
-		display_alert "Fragment problem" "Call to call_hook_point() (in ${BASH_SOURCE[1]}) before fragment manager is initialized." "err"
+		display_alert "Fragment problem" "Call to call_hook_point() (in ${BASH_SOURCE[1]- $(get_fragment_hook_stracktrace "${BASH_SOURCE[*]}" "${BASH_LINENO[*]}")}) before fragment manager is initialized." "err"
 	fi
+
+	# With DEBUG_HOOKS, log the hook call. Users might be wondering what/when is a good hook point to use, and this is visual aid.
+	[[ "${DEBUG_HOOKS}" == "yes" ]] &&
+		display_alert "Hook point '${1}' being called from" "$(get_fragment_hook_stracktrace "${BASH_SOURCE[*]}" "${BASH_LINENO[*]}")" ""
 
 	# Then call the hooks, if they are defined.
 	for hook_name in "$@"; do
@@ -45,7 +49,7 @@ initialize_fragment_manager() {
 	[[ ${initialize_fragment_manager_counter} -lt 1 ]] && [[ "${ADD_FRAGMENTS}" != "" ]] && {
 		local auto_fragment
 		for auto_fragment in $(echo "${ADD_FRAGMENTS}" | tr "," " "); do
-			add_fragment "${auto_fragment}"
+			ADD_FRAGMENT_TRACE_HINT="CMDLINE -> " add_fragment "${auto_fragment}"
 		done
 	}
 
@@ -172,16 +176,14 @@ FUNCTION_DEFINITION_HEADER
 			hook_point_function_variables="${hook_point_function_variables} HOOK_ORDER=\"${hook_point_functions_loop_counter}\""
 
 			# add it to our (not the call site!) environment. if we export those in the call site, the stack is corrupted.
-			# shellcheck disable=SC2086
-			# shellcheck disable=SC2090
-			local ${hook_point_function_variables}
+			local "${hook_point_function_variables}"
 
 			# output the call, passing arguments, and also logging the output to the fragments log.
 			# attention: don't pipe here (eg, capture output), otherwise hook function cant modify the environment (which is mostly the point)
 			# @TODO: better error handling. we have a good opportunity to 'set -e' here, and 'set +e' after, so that fragment authors are encouraged to write error-free handling code
 			cat <<FUNCTION_DEFINITION_CALLSITE >>"${temp_source_file_for_hook_point}"
-			hook_point_function_trace_sources["${hook_point}${hook_fragment_delimiter}${hook_point_function}"]="\${BASH_SOURCE[@]}"
-			hook_point_function_trace_lines["${hook_point}${hook_fragment_delimiter}${hook_point_function}"]="\${BASH_LINENO[@]}"
+			hook_point_function_trace_sources["${hook_point}${hook_fragment_delimiter}${hook_point_function}"]="\${BASH_SOURCE[*]}"
+			hook_point_function_trace_lines["${hook_point}${hook_fragment_delimiter}${hook_point_function}"]="\${BASH_LINENO[*]}"
 			[[ "\${DEBUG_HOOKS}" == "yes" ]] && display_alert "Hook ${hook_point}" "${hook_point_functions_loop_counter}/${hook_point_functions_counter} (frag:${FRAGMENT:-built-in}) ${hook_point_function}" ""
 			echo "*** *** Fragment-managed hook starting ${hook_point_functions_loop_counter}/${hook_point_functions_counter} '${hook_point}${hook_fragment_delimiter}${hook_point_function}':" >>"\${FRAGMENT_MANAGER_LOG_FILE}"
 			${hook_point_function_variables} ${hook_point}${hook_fragment_delimiter}${hook_point_function} "\$@"
@@ -189,7 +191,7 @@ FUNCTION_DEFINITION_HEADER
 FUNCTION_DEFINITION_CALLSITE
 
 			# unset fragment vars for the next loop.
-			unset FRAGMENT FRAGMENT_DIR FRAGMENT_FILE
+			unset FRAGMENT FRAGMENT_DIR FRAGMENT_FILE FRAGMENT_ADDED_BY
 		done
 
 		cat <<FUNCTION_DEFINITION_FOOTER >>"${temp_source_file_for_hook_point}"
@@ -248,7 +250,7 @@ FRAGMENT_METADATA_READY
 	export FRAGMENT_MANAGER_LOG_FILE="${DEST}"/debug/fragments.log
 }
 
-# This is called by call_hook_point(). To say the truth, this should be in a fragment.
+# This is called by call_hook_point(). To say the truth, this should be in a fragment. But then it gets too meta for anyone's head.
 write_hook_point_metadata() {
 	local main_hook_point_name="$1"
 
@@ -262,6 +264,31 @@ write_hook_point_metadata() {
 	echo "${main_hook_point_name}" >>"${FRAGMENT_MANAGER_TMP_DIR}/hook_point_calls.txt"
 }
 
+# Helper function, to get clean "stack traces" that do not include the hook/fragment infrastructure code.
+get_fragment_hook_stracktrace() {
+	local sources_str="$1" # Give this ${BASH_SOURCE[*]} - expanded
+	local lines_str="$2"   # And this # Give this ${BASH_LINENO[*]} - expanded
+	local sources lines index final_stack=""
+	IFS=' ' read -r -a sources <<<"${sources_str}"
+	IFS=' ' read -r -a lines <<<"${lines_str}"
+	for index in "${!sources[@]}"; do
+		local source="${sources[index]}" line="${lines[index]}"
+		# skip fragment infrastructure sources, these only pollute the trace and add no insight to users
+		[[ ${source} == */.tmp/fragment_function_definition.sh ]] && continue
+		[[ ${source} == *lib/fragments.sh ]] && continue
+		[[ ${source} == */compile.sh ]] && continue
+		# relativize the source, otherwise too long to display
+		source="${source#"${SRC}/"}"
+		# remove 'lib/'. hope this is not too confusing.
+		source="${source#"lib/"}"
+		# add to the list
+		arrow="$([[ "$final_stack" != "" ]] && echo " -> ")"
+		final_stack="${source}:${line} ${arrow} ${final_stack} "
+	done
+	# output the result, no newline
+	echo -n $final_stack
+}
+
 # can be called by board, family, config or user to make sure a fragment is included.
 # single argument is the fragment name.
 # will look for it in /userpatches/fragments first.
@@ -269,11 +296,18 @@ write_hook_point_metadata() {
 # if not found will throw and abort compilation (or will it? no set -e no this codebase in general)
 add_fragment() {
 	local fragment_name="$1"
-	local fragment_dir fragment_file fragment_file_in_dir fragment_floating_file
+	local fragment_dir fragment_file fragment_file_in_dir fragment_floating_file stacktrace
+
+	# capture the stack leading to this, possibly with a hint in front.
+	stacktrace="${ADD_FRAGMENT_TRACE_HINT}$(get_fragment_hook_stracktrace "${BASH_SOURCE[*]}" "${BASH_LINENO[*]}")"
+
+	# if DEBUG_HOOKS, output useful stack, so user can figure out which fragments are being added where
+	[[ "${DEBUG_HOOKS}" == "yes" ]] &&
+		display_alert "Fragment being added" "${fragment_name} :: added by ${stacktrace}" ""
 
 	# first a check, has the fragment manager already initialized? then it is too late to add_fragment(). bail.
 	if [[ ${initialize_fragment_manager_counter} -gt 0 ]]; then
-		echo "ERR: Fragment problem -- already initialized -- too late to add '${fragment_name}' by ${BASH_SOURCE[1]}" | tee -a "${FRAGMENT_MANAGER_LOG_FILE}"
+		echo "ERR: Fragment problem -- already initialized -- too late to add '${fragment_name}' (trace: ${stacktrace})" | tee -a "${FRAGMENT_MANAGER_LOG_FILE}"
 		exit 2
 	fi
 
@@ -320,10 +354,12 @@ add_fragment() {
 	# iterate over defined functions, store them in global associative array fragment_function_info
 	for newly_defined_function in ${new_function_list}; do
 		echo "fragment: ${fragment_name} defined function ${newly_defined_function}" >>"${FRAGMENT_MANAGER_LOG_FILE}"
-		fragment_function_info["${newly_defined_function}"]="FRAGMENT=\"${fragment_name}\" FRAGMENT_DIR=\"${fragment_dir}\" FRAGMENT_FILE=\"${fragment_file}\""
+		fragment_function_info["${newly_defined_function}"]="FRAGMENT=\"${fragment_name}\" FRAGMENT_DIR=\"${fragment_dir}\" FRAGMENT_FILE=\"${fragment_file}\" FRAGMENT_ADDED_BY=\"${stacktrace}\""
 	done
 
-	echo "Fragment activated '${fragment_name}': from ${fragment_file}" >>"${FRAGMENT_MANAGER_LOG_FILE}"
+	# Always output to the log
+	echo "Fragment added: '${fragment_name}': from ${fragment_file} - added by: '${stacktrace}'" >>"${FRAGMENT_MANAGER_LOG_FILE}"
+
 }
 
 # For the insanity above to (eventually) make sense to anyone we need logging. Unfortunately,

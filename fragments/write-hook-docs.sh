@@ -1,4 +1,8 @@
 ## Hooks
+function fragment_metadata_ready__499_display_docs_generation_start_info() {
+	display_alert "Generating hook documentation and sample fragment"
+}
+
 function fragment_metadata_ready__docs_markdown() {
 	generate_markdown_docs_to_stdout >"${DEST}/debug/hooks.auto.docs.md"
 }
