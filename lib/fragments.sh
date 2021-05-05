@@ -1,6 +1,7 @@
 # global variables managing the state of the fragment manager. treat as private.
 declare -A fragment_function_info                # maps a function name to a string with KEY=VALUEs information about the defining fragment
 declare -i initialize_fragment_manager_counter=0 # how many times has the fragment manager initialized?
+export DEBUG_HOOKS=no                            # set to yes to log every hook function called.
 
 # This is a helper function for calling hooks.
 # It follows the pattern long used in the codebase for hook-like behaviour:
@@ -12,29 +13,20 @@ declare -i initialize_fragment_manager_counter=0 # how many times has the fragme
 #    combined with heredoc in the call site, it allows for "inline" documentation about the hook
 # notice: this is not involved in how the hook functions came to be. read below for that.
 call_hook_point() {
-	# First, consume the stdin and write docs...
-	write_hook_documentation_fragment "$@"
+	# First, consume the stdin and write metadata about the call.
+	write_hook_point_metadata "$@" || true
+
+	# Then a sanity check, hook points should only be invoked after the manager has initialized.
+	if [[ ${initialize_fragment_manager_counter} -lt 1 ]]; then
+		display_alert "Fragment problem" "Call to call_hook_point() (in ${BASH_SOURCE[1]}) before fragment manager is initialized." "err"
+	fi
+
 	# Then call the hooks, if they are defined.
 	for hook_name in "$@"; do
-		# Log to the fragment log that the hook is starting...
 		echo "-- hook being called: ${hook_name}" >>"${FRAGMENT_MANAGER_LOG_FILE}"
 		# shellcheck disable=SC2086
 		[[ $(type -t ${hook_name}) == function ]] && { ${hook_name}; }
 	done
-}
-
-write_hook_documentation_fragment() {
-	cat <<EOD >>"${FRAGMENT_MANAGER_DOCS_FILE}"
-## Hook: \`$1\`
-### Description
-$(cat -)
-### Names:
-$(
-		for hook_name in "$@"; do echo "- \`${hook_name}\`"; done
-		echo ""
-	)
-
-EOD
 }
 
 # what this does is a lot of bash mumbo-jumbo to find all board-,family-,config- or user-defined hook points.
@@ -45,12 +37,22 @@ EOD
 # to avoid hard coding the list of hook-points (eg: user_config, image_tweaks_pre_customize, etc) we use
 # a marker in the function names, namely "__" (two underscores) to determine the hook point.
 initialize_fragment_manager() {
-	local hook_fragment_delimiter="__"
+	# before starting, auto-add fragments specified (eg, on the command-line) via the ADD_FRAGMENTS env var. Do it only once.
+	[[ ${initialize_fragment_manager_counter} -lt 1 ]] && [[ "${ADD_FRAGMENTS}" != "" ]] && {
+		local auto_fragment
+		for auto_fragment in $(echo "${ADD_FRAGMENTS}" | tr "," " "); do
+			add_fragment "${auto_fragment}"
+		done
+	}
 
+	# This marks the manager as initialized, no more fragments are allowed to load after this.
 	export initialize_fragment_manager_counter=$((initialize_fragment_manager_counter + 1))
 
 	# log whats happening.
-	echo "-- initialize_fragment_manager() called; produced functions below." >>"${FRAGMENT_MANAGER_LOG_FILE}"
+	echo "-- initialize_fragment_manager() called." >>"${FRAGMENT_MANAGER_LOG_FILE}"
+
+	# this is the all-important separator.
+	local hook_fragment_delimiter="__"
 
 	# list all defined functions. filter only the ones that have the delimiter. get only the part before the delimiter.
 	# sort them, and make them unique. the sorting is required for uniq to work, and does not affect the ordering of execution.
@@ -74,7 +76,7 @@ initialize_fragment_manager() {
 		existing_hook_point_function="$(compgen -A function | grep "^${hook_point}\$")"
 		if [[ "${existing_hook_point_function}" == "${hook_point}" ]]; then
 			echo "--- hook_point_functions (final sorted realnames): ${hook_point_functions}" >>"${FRAGMENT_MANAGER_LOG_FILE}"
-			display_alert "Fragment conflict" "function ${hook_point} already defined, ignoring functions: ${hook_point_functions}" "wrn"
+			display_alert "Fragment conflict" "function ${hook_point} already defined! ignoring functions: $(compgen -A function | grep "^${hook_point}${hook_fragment_delimiter}")" "wrn"
 			continue
 		fi
 
@@ -171,7 +173,7 @@ FUNCTION_DEFINITION_HEADER
 			# attention: don't pipe here (eg, capture output), otherwise hook function cant modify the environment (which is mostly the point)
 			# @TODO: better error handling. we have a good opportunity to 'set -e' here, and 'set +e' after, so that fragment authors are encouraged to write error-free handling code
 			cat <<FUNCTION_DEFINITION_CALLSITE >>"${temp_source_file_for_hook_point}"
-			display_alert "Hook ${hook_point}" "${hook_point_functions_loop_counter}/${hook_point_functions_counter} (frag:${FRAGMENT:-built-in}) ${hook_point_function}" ""
+			[[ "\${DEBUG_HOOKS}" == "yes" ]] && display_alert "Hook ${hook_point}" "${hook_point_functions_loop_counter}/${hook_point_functions_counter} (frag:${FRAGMENT:-built-in}) ${hook_point_function}" ""
 			echo "*** *** Fragment-managed hook starting ${hook_point_functions_loop_counter}/${hook_point_functions_counter} '${hook_point}${hook_fragment_delimiter}${hook_point_function}':" >>"\${FRAGMENT_MANAGER_LOG_FILE}"
 			${hook_point_function_variables} ${hook_point}${hook_fragment_delimiter}${hook_point_function} "\$@"
 			echo "*** *** Fragment-managed hook finished ${hook_point_functions_loop_counter}/${hook_point_functions_counter} '${hook_point}${hook_fragment_delimiter}${hook_point_function}':" >>"\${FRAGMENT_MANAGER_LOG_FILE}"
@@ -198,20 +200,51 @@ FUNCTION_DEFINITION_FOOTER
 
 		rm -f "${temp_source_file_for_hook_point}"
 	done
-	display_alert "Fragment manager" "processed ${hook_points_counter} hook points and ${hook_functions_counter} hook functions" "info" | tee -a "${FRAGMENT_MANAGER_LOG_FILE}"
+
+	# Dont show any output until we have more than 1 hook function (we implement one already, below)
+	[[ ${hook_functions_counter} -gt 0 ]] &&
+		display_alert "Fragment manager" "processed ${hook_points_counter} hook points and ${hook_functions_counter} hook functions" "info" | tee -a "${FRAGMENT_MANAGER_LOG_FILE}"
 }
 
 # why not eat our own dog food?
 # process everything that happened during fragment related activities
 # and write it to the log. also, move the log from the .tmp dir to its
-# final location. this will trigger a warning if run_after_build() is defined elsewhere.
-run_after_build__900_finish_fragment_manager() {
-	# Move temporary log file over to final destination, and start writing to it instead (although 900 is pretty late in the game)
+# final location. this will make run_after_build() "hot" (eg, emit warnings)
+run_after_build__999_finish_fragment_manager() {
+	# eat our own dog food, pt2.
+	call_hook_point "fragment_metadata_ready" <<'FRAGMENT_METADATA_READY'
+*meta-Meta time!*
+Implement this hook to work with/on the meta-data made available by the fragment manager.
+Interesting stuff to process:
+- `"${FRAGMENT_MANAGER_TMP_DIR}/hook_point_calls.txt"` contains a list of all hook points called, in order.
+- For each hook_point in the list, more files will have metadata about that hook point.
+  - `${FRAGMENT_MANAGER_TMP_DIR}/hook_point.orig.md` contains the hook documentation at the call site (inline docs), hopefully in Markdown format.
+  - `${FRAGMENT_MANAGER_TMP_DIR}/hook_point.compat` contains the compatibility names for the hooks.
+  - `${FRAGMENT_MANAGER_TMP_DIR}/hook_point.exports` contains _exported_ environment variables.
+  - `${FRAGMENT_MANAGER_TMP_DIR}/hook_point.vars` contains _all_ environment variables.
+After this hook is done, the `${FRAGMENT_MANAGER_TMP_DIR}` will be removed.
+FRAGMENT_METADATA_READY
+
+	# Cleanup. Leave no trace... @TODO
+	# [[ -d "${FRAGMENT_MANAGER_TMP_DIR}" ]] && rm -rf "${FRAGMENT_MANAGER_TMP_DIR}"
+
+	# Move temporary log file over to final destination, and start writing to it instead (although 999 is pretty late in the game)
 	mv "${FRAGMENT_MANAGER_LOG_FILE}" "${DEST}"/debug/
 	export FRAGMENT_MANAGER_LOG_FILE="${DEST}"/debug/fragments.log
+}
 
-	# Move generated docs and example fragment too.
-	mv "${SRC}/.tmp/fragment_auto_docs.md" "${DEST}"/debug/
+# This is called by call_hook_point(). To say the truth, this should be in a fragment.
+write_hook_point_metadata() {
+	local main_hook_point_name="$1"
+
+	cat - >"${FRAGMENT_MANAGER_TMP_DIR}/${main_hook_point_name}.orig.md" # Write the hook point documentation received via stdin to a tmp file for later processing.
+	shift
+	echo -n "$@" >"${FRAGMENT_MANAGER_TMP_DIR}/${main_hook_point_name}.compat"       # log the 2nd+ arguments too (those are the alternative/compatibility names), separate file.
+	compgen -A export >"${FRAGMENT_MANAGER_TMP_DIR}/${main_hook_point_name}.exports" # capture the exported env vars.
+	compgen -A variable >"${FRAGMENT_MANAGER_TMP_DIR}/${main_hook_point_name}.vars"  # capture all env vars.
+
+	# add to the list of hook points called, in order.
+	echo "${main_hook_point_name}" >>"${FRAGMENT_MANAGER_TMP_DIR}/hook_point_calls.txt"
 }
 
 # can be called by board, family, config or user to make sure a fragment is included.
@@ -278,15 +311,12 @@ add_fragment() {
 	echo "Fragment activated '${fragment_name}': from ${fragment_file}" >>"${FRAGMENT_MANAGER_LOG_FILE}"
 }
 
-# For the insanity above to (maybe) make sense to anyone we need logging. Unfortunately,
-# this runs super early (from compile.sh), and DEST is not defined yet; logs will still be moved away and compressed when this runs.
-# We cheat. That's why it's hidden down here. Sorry ;-)
-mkdir -p "${SRC}"/.tmp
+# For the insanity above to (eventually) make sense to anyone we need logging. Unfortunately,
+# this runs super early (from compile.sh), and its too early to write to /output/debug.
+export FRAGMENT_MANAGER_TMP_DIR="${SRC}/.tmp/.fragments"
 export FRAGMENT_MANAGER_LOG_FILE="${SRC}/.tmp/fragments.log"
+mkdir -p "${SRC}"/.tmp "${FRAGMENT_MANAGER_TMP_DIR}"
+echo -n "" >"${FRAGMENT_MANAGER_TMP_DIR}/hook_point_order.txt"
 
 # globally initialize the fragments log.
-echo "-- lib/fragments.sh included. addition logs will be below, followed by the debug generated by the initialize_fragment_manager() function." >"${FRAGMENT_MANAGER_LOG_FILE}"
-
-# we also generate documentation about the hook points.
-export FRAGMENT_MANAGER_DOCS_FILE="${SRC}/.tmp/fragment_auto_docs.md"
-echo "# Armbian build system extensibility" >"${FRAGMENT_MANAGER_DOCS_FILE}"
+echo "-- lib/fragments.sh included. logs will be below, followed by the debug generated by the initialize_fragment_manager() function." >"${FRAGMENT_MANAGER_LOG_FILE}"

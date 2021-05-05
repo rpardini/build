@@ -63,11 +63,6 @@ PRE_INSTALL_DISTRIBUTION_SPECIFIC
 	# install from apt.armbian.com
 	[[ $EXTERNAL_NEW == prebuilt ]] && chroot_installpackages "yes"
 
-	call_hook_point "pre_customize_image" "config_pre_customize_image" << 'PRE_CUSTOMIZE_IMAGE'
-*give config a chance to act before customize_image*
-Called after `chroot_installpackages` (_install from apt.armbian.com_) but before `customize_image` (_user customization script_).
-PRE_CUSTOMIZE_IMAGE
-
 	# stage: user customization script
 	# NOTE: installing too many packages may fill tmpfs mount
 	customize_image
