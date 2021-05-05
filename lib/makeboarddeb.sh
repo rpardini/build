@@ -132,8 +132,6 @@ create_board_package()
 	[ -f "/lib/systemd/system/resize2fs.service" ] && rm /lib/systemd/system/resize2fs.service
 	[ -f "/usr/lib/armbian/apt-updates" ] && rm /usr/lib/armbian/apt-updates
 	[ -f "/usr/lib/armbian/firstrun-config.sh" ] && rm /usr/lib/armbian/firstrun-config.sh
-	# fix for https://bugs.launchpad.net/ubuntu/+source/lightdm-gtk-greeter/+bug/1897491
-	[ -d "/var/lib/lightdm" ] && (chown -R lightdm:lightdm /var/lib/lightdm ; chmod 0750 /var/lib/lightdm)
 	exit 0
 	EOF
 
@@ -254,9 +252,9 @@ fi
 		mv /usr/lib/chromium-browser/master_preferences.dpkg-dist /usr/lib/chromium-browser/master_preferences
 	fi
 
-	sed -i "s/^PRETTY_NAME=.*/PRETTY_NAME=\"${VENDOR} $REVISION "${RELEASE^}"\"/" /etc/os-release
-	echo "${VENDOR} ${REVISION} ${RELEASE^} \\l \n" > /etc/issue
-	echo "${VENDOR} ${REVISION} ${RELEASE^}" > /etc/issue.net
+	sed -i "s/^PRETTY_NAME=.*/PRETTY_NAME=\"Armbian $REVISION "${RELEASE^}"\"/" /etc/os-release
+	echo "Armbian ${REVISION} ${RELEASE^} \\l \n" > /etc/issue
+	echo "Armbian ${REVISION} ${RELEASE^}" > /etc/issue.net
 
 	systemctl --no-reload enable armbian-hardware-monitor.service armbian-hardware-optimize.service armbian-zram-config.service >/dev/null 2>&1
 	exit 0
@@ -309,9 +307,14 @@ fi
 	# this is required for NFS boot to prevent deconfiguring the network on shutdown
 	sed -i 's/#no-auto-down/no-auto-down/g' "${destination}"/etc/network/interfaces.default
 
+	if [[ $LINUXFAMILY == sunxi* ]]; then
+		# add mpv config for x11 output - slow, but it works compared to no config at all
+		# TODO: Test which output driver is better with DRM
+		mkdir -p "${destination}"/etc/mpv/
+		cp "${SRC}"/packages/bsp/mpv/mpv_mainline.conf "${destination}"/etc/mpv/mpv.conf
+	fi
+
 	# execute $LINUXFAMILY-specific tweaks
-	# this is invoked directly, and not as a hook. it is pre-fragments, and the families are supposed
-	# to implement them directly. We have a post_ hook next that config can use to override.
 	[[ $(type -t family_tweaks_bsp) == function ]] && family_tweaks_bsp
 
 	call_hook_point "post_family_tweaks_bsp" << 'POST_FAMILY_TWEAKS_BSP'
