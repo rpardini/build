@@ -759,8 +759,8 @@ PRE_UPDATE_INITRAMFS
 	display_alert "Free SD cache" "$(echo -e "$freespace" | grep $SDCARD | awk '{print $5}')" "info"
 	display_alert "Mount point" "$(echo -e "$freespace" | grep $MOUNT | head -1 | awk '{print $5}')" "info"
 
-	# stage: write u-boot
-	write_uboot $LOOP
+	# stage: write u-boot, unless the deb is not there, which would happen if BOOTCONFIG=none
+	[[ -f "${DEB_STORAGE}"/${CHOSEN_UBOOT}_${REVISION}_${ARCH}.deb ]] &&  write_uboot $LOOP
 
 	# fix wrong / permissions
 	chmod 755 $MOUNT

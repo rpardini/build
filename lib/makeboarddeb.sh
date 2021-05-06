@@ -31,6 +31,7 @@ create_board_package()
 	copy_all_packages_files_for "bsp-cli"
 
 	# install copy of boot script & environment file
+	[[ "${BOOTCONFIG}" != "none" ]] && {
 	local bootscript_src=${BOOTSCRIPT%%:*}
 	local bootscript_dst=${BOOTSCRIPT##*:}
 	mkdir -p "${destination}"/usr/share/armbian/
@@ -53,6 +54,7 @@ create_board_package()
 		echo "# Device to access      offset           env size" > "${destination}"/etc/fw_env.config
 		echo "/dev/mmcblk0	${UBOOT_FW_ENV[0]}	${UBOOT_FW_ENV[1]}" >> "${destination}"/etc/fw_env.config
 	fi
+	}
 
 	# Replaces: base-files is needed to replace /etc/update-motd.d/ files on Xenial
 	# Replaces: unattended-upgrades may be needed to replace /etc/apt/apt.conf.d/50unattended-upgrades

@@ -186,11 +186,13 @@ install_common()
 		fi
 	else
 
-		if [ -f "${USERPATCHES_PATH}/bootscripts/${bootscript_src}" ]; then
-			cp "${USERPATCHES_PATH}/bootscripts/${bootscript_src}" "${SDCARD}/boot/${bootscript_dst}"
-		else
-			cp "${SRC}/config/bootscripts/${bootscript_src}" "${SDCARD}/boot/${bootscript_dst}"
-		fi
+		[[ "${BOOTCONFIG}" != "none" ]] && { 
+			if [ -f "${USERPATCHES_PATH}/bootscripts/${bootscript_src}" ]; then
+				cp "${USERPATCHES_PATH}/bootscripts/${bootscript_src}" "${SDCARD}/boot/${bootscript_dst}"
+			else
+				cp "${SRC}/config/bootscripts/${bootscript_src}" "${SDCARD}/boot/${bootscript_dst}"
+			fi
+		}
 
 		if [[ -n $BOOTENV_FILE ]]; then
 			if [[ -f $USERPATCHES_PATH/bootenv/$BOOTENV_FILE ]]; then
@@ -267,13 +269,15 @@ install_common()
 	fi
 
 	# install u-boot
-	if [[ "${REPOSITORY_INSTALL}" != *u-boot* ]]; then
-		UBOOT_VER=$(dpkg --info "${DEB_STORAGE}/${CHOSEN_UBOOT}_${REVISION}_${ARCH}.deb" | grep Descr | awk '{print $(NF)}')
-		install_deb_chroot "${DEB_STORAGE}/${CHOSEN_UBOOT}_${REVISION}_${ARCH}.deb"
-	else
-		install_deb_chroot "linux-u-boot-${BOARD}-${BRANCH}" "remote" "yes"
-		UPSTREM_VER=$(dpkg-deb -f "${SDCARD}"/var/cache/apt/archives/linux-u-boot-${BOARD}-${BRANCH}*_${ARCH}.deb Version)
-	fi
+	[[ "${BOOTCONFIG}" != "none" ]] && {
+		if [[ "${REPOSITORY_INSTALL}" != *u-boot* ]]; then
+			UBOOT_VER=$(dpkg --info "${DEB_STORAGE}/${CHOSEN_UBOOT}_${REVISION}_${ARCH}.deb" | grep Descr | awk '{print $(NF)}')
+			install_deb_chroot "${DEB_STORAGE}/${CHOSEN_UBOOT}_${REVISION}_${ARCH}.deb"
+		else
+			install_deb_chroot "linux-u-boot-${BOARD}-${BRANCH}" "remote" "yes"
+			UPSTREM_VER=$(dpkg-deb -f "${SDCARD}"/var/cache/apt/archives/linux-u-boot-${BOARD}-${BRANCH}*_${ARCH}.deb Version)
+		fi
+	}
 
 	# install kernel
 	if [[ "${REPOSITORY_INSTALL}" != *kernel* ]]; then
