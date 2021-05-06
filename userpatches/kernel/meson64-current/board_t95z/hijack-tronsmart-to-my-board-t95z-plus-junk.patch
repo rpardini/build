@@ -1,0 +1,24 @@
+diff --git a/arch/arm64/boot/dts/amlogic/meson-gxm-vega-s96.dts b/arch/arm64/boot/dts/amlogic/meson-gxm-vega-s96.dts
+index d3fdba4da..f22a67de4 100644
+--- a/arch/arm64/boot/dts/amlogic/meson-gxm-vega-s96.dts
++++ b/arch/arm64/boot/dts/amlogic/meson-gxm-vega-s96.dts
+@@ -12,7 +12,7 @@
+
+ / {
+ 	compatible = "tronsmart,vega-s96", "amlogic,s912", "amlogic,meson-gxm";
+-	model = "Tronsmart Vega S96";
++	model = "T95Z Plus 2Gb RAM 16Gb MMC 1gbit eth - Chinese q201-n1 clone";
+
+ };
+
+@@ -31,8 +31,8 @@ &ethmac {
+
+ &external_mdio {
+ 	external_phy: ethernet-phy@0 {
+-		/* Realtek RTL8211F (0x001cc916) */
+-		reg = <0>;
++		/* Amlogic eth phy */
++		reg = <1>;
+ 	};
+ };
+
