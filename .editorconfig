@@ -8,7 +8,7 @@ charset = utf-8
 end_of_line = lf
 indent_style = tab
 indent_size = 8
-trim_trailing_whitespace = true
+trim_trailing_whitespace = false # this is so I dont go crazy; upstream has this set to true, but the codebase is full of trailing whitespace, and my IDE goes insane during interactive rebase
 insert_final_newline = true
 
 [*.md]
@@ -31,3 +31,9 @@ indent_size = 8
 [*.h]
 indent_style = tab
 indent_size = 8
+
+[*.yaml]
+indent_style = space
+indent_size = 2
+trim_trailing_whitespace = true
+insert_final_newline = false

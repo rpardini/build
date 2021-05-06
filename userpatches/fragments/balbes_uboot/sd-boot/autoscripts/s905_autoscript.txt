@@ -1,0 +1,12 @@
+echo "*** *** this is s905_autoscript starting *** *** "
+echo "*** *** trying: bootfromsd *** *** "
+if printenv bootfromsd; then exit; fi;
+echo "*** *** trying: fatload mmc 0 ${loadaddr} boot_android *** *** "
+if fatload mmc 0 ${loadaddr} boot_android; then if test ${ab} = 0; then setenv ab 1; saveenv; exit; else setenv ab 0; saveenv; fi; fi;
+echo "*** *** trying: fatload usb 0 ${loadaddr} boot_android *** *** "
+if fatload usb 0 ${loadaddr} boot_android; then if test ${ab} = 0; then setenv ab 1; saveenv; exit; else setenv ab 0; saveenv; fi; fi;
+echo "*** *** trying: fatload mmc 0 0x1000000 u-boot.ext *** *** "
+if fatload mmc 0 0x1000000 u-boot.ext; then go 0x1000000; fi;
+echo "*** *** trying: fatload usb 0 0x1000000 u-boot.ext *** *** "
+if fatload usb 0 0x1000000 u-boot.ext; then go 0x1000000; fi;
+echo "*** *** trying: NOT MORE TRIES s905_autoscript *** *** "

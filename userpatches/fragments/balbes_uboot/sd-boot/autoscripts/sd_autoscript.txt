@@ -1,0 +1,10 @@
+echo "*** *** this is sd_autoscript starting *** *** "
+echo "*** *** trying: fatload mmc 0 0x1000000 u-boot.ext *** *** "
+if fatload mmc 0 0x1000000 u-boot.ext; then go 0x1000000; fi;
+echo "*** *** trying: fatload mmc 1 0x1000000 u-boot.ext *** *** "
+if fatload mmc 1 0x1000000 u-boot.ext; then go 0x1000000; fi;
+echo "*** *** trying: fatload mmc 0 0x1000000 u-boot.ext *** *** "
+if fatload mmc 0 0x1000000 u-boot.emmc; then go 0x1000000; fi;
+echo "*** *** trying: fatload mmc 1 0x1000000 u-boot.ext *** *** "
+if fatload mmc 1 0x1000000 u-boot.emmc; then go 0x1000000; fi;
+echo "*** *** trying: NOT MORE TRIES sd_autoscript *** *** "
