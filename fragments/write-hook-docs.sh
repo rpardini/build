@@ -16,7 +16,6 @@ function fragment_metadata_ready__docs_sample_fragment() {
 
 ### Common stuff
 function read_common_data() {
-	declare -i HOOK_POINT_CALLS_COUNT HOOK_POINT_CALLS_UNIQUE_COUNT
 	export HOOK_POINT_CALLS_COUNT=$(wc -l <"${FRAGMENT_MANAGER_TMP_DIR}/hook_point_calls.txt")
 	export HOOK_POINT_CALLS_UNIQUE_COUNT=$(sort <"${FRAGMENT_MANAGER_TMP_DIR}/hook_point_calls.txt" | uniq | wc -l)
 	export HOOK_POINTS_WITH_MULTIPLE_CALLS=""
@@ -112,7 +111,7 @@ generate_bash_sample_for_hook_point() {
 	local COMMENT_BODY="$(echo "${MARKDOWN_BODY}" | tr '`' '"' | sed -e 's/^/###  /')"
 
 	local bonus=""
-	[[ "${HOOK_POINT_COUNTER}" == "1" ]] && bonus="\n\texport PROGRESS_DISPLAY=verysilent # Example: export a variable. This one silences the built."
+	[[ "${HOOK_POINT_COUNTER}" == "1" ]] && bonus="$(echo -e "\n\texport PROGRESS_DISPLAY=verysilent # Example: export a variable. This one silences the built.")"
 
 	cat <<SAMPLE_BASH_CODE
 ${COMMENT_HEAD}

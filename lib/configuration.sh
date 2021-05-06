@@ -130,9 +130,9 @@ source "${SRC}/config/sources/${ARCH}.conf"
 ##            like the 'post_family_config' that is invoked below.
 initialize_fragment_manager
 
-call_hook_point "post_family_config" "config_tweaks_post_family_config" << POST_FAMILY_CONFIG
+call_hook_point "post_family_config" "config_tweaks_post_family_config" << 'POST_FAMILY_CONFIG'
 *give the config a chance to override the family/arch defaults*
-This hook is called after the family configuration ([userpatches/]sources/families/xxx.conf) is sourced.
+This hook is called after the family configuration (`sources/families/xxx.conf`) is sourced.
 Since the family can override values from the user configuration and the board configuration,
 it is often used to in turn override those.
 POST_FAMILY_CONFIG

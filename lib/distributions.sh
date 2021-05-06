@@ -371,11 +371,13 @@ MARKDOWN_DOCS_FOR_HOOK
 	# copy boot splash images
 	cp "${SRC}"/packages/blobs/splash/armbian-u-boot.bmp "${SDCARD}"/boot/boot.bmp
 
-	call_hook_point "family_tweaks" << 'FAMILY_TWEAKS'
-*execute $LINUXFAMILY-specific tweaks*
-This hook is meant to be implemented by families, and is run after packages are installed in the rootfs,
-but before enabling additional services. It allows implementors access to the rootfs (`${SDCARD}`) in
-its pristine state after packages are installed.
+	# execute $LINUXFAMILY-specific tweaks
+	[[ $(type -t family_tweaks) == function ]] && family_tweaks
+
+	call_hook_point "post_family_tweaks" << 'FAMILY_TWEAKS'
+*customize the tweaks made by $LINUXFAMILY-specific family_tweaks*
+It is run after packages are installed in the rootfs, but before enabling additional services.
+It allows implementors access to the rootfs (`${SDCARD}`) in its pristine state after packages are installed.
 FAMILY_TWEAKS
 
 	# enable additional services
