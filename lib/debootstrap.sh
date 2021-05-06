@@ -246,8 +246,10 @@ create_rootfs_cache()
 		# stage: create apt-get sources list
 		create_sources_list "$RELEASE" "$SDCARD/"
 
-		# add armhf arhitecture to arm64
-		[[ $ARCH == arm64 ]] && eval 'LC_ALL=C LANG=C chroot $SDCARD /bin/bash -c "dpkg --add-architecture armhf"'
+		# add armhf arhitecture to arm64, unless configured not to do so.
+		if [[ "a${ARMHF_ARCH}" != "askip" ]]; then
+			[[ $ARCH == arm64 ]] && eval 'LC_ALL=C LANG=C chroot $SDCARD /bin/bash -c "dpkg --add-architecture armhf"'
+		fi
 
 		# this should fix resolvconf installation failure in some cases
 		chroot $SDCARD /bin/bash -c 'echo "resolvconf resolvconf/linkify-resolvconf boolean false" | debconf-set-selections'
