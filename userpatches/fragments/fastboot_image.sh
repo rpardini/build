@@ -15,7 +15,7 @@ user_config__900_disable_all_image_fingerprints_and_compression() {
 }
 
 # the real images have been produced elsewhere (.fastboot.boot and .fastboot.rootfs .imgs)
-post_build_image__discard_full_image() {
+post_build_image__800_discard_full_image() {
 	[[ -f "${FINALDEST}/${version}.img" ]] && rm -f "${FINALDEST}/${version}.img"
 	[[ -f "${FINALDEST}/${version}.img.txt" ]] && rm -f "${FINALDEST}/${version}.img.txt"
 }
@@ -26,7 +26,10 @@ prepare_partitions_custom__add_rootfs_label_to_mkfs() {
 	mkopts[ext4]="-L ${ROOT_FS_LABEL} ${mkopts[ext4]}"
 }
 
-config_pre_umount_final_image__androidfastboot_extract_kernel() {
+# 990_ should be late enough in the game...
+config_pre_umount_final_image__990_fastboot_create_boot_img() {
+	display_alert "Creating Android fastboot boot.img" "Hook Order: ${HOOK_ORDER} of ${HOOK_POINT_TOTAL_FUNCS}" "info"
+
 	# fastboot boot wants the gzipped kernel and concatenated dtb at the end. don't ask questions.
 	gzip -9 --keep --no-name "$MOUNT"/boot/vmlinuz-*
 	cat "$MOUNT"/boot/vmlinuz-*.gz "$MOUNT"/boot/dtb/"${BOOT_FDT_FILE}" >"$MOUNT"/boot/vmlinuz.gz.dtb
@@ -34,9 +37,14 @@ config_pre_umount_final_image__androidfastboot_extract_kernel() {
 	# Prepare the android boot.img using mkbootimg -- this probably should move into initramfs generation,
 	# create Armbian based boot.img for android fastboot.
 	create_fastboot_boot_img "boot" "$MOUNT"/boot/initrd.img-* "root=LABEL=${ROOT_FS_LABEL} console=ttyGS0,115200 console=tty1 ${deviceinfo_kernel_cmdline}"
+	
+	# clean up. no need to keep intermediaries.
+	rm "$MOUNT"/boot/vmlinuz-*.gz "$MOUNT"/boot/vmlinuz.gz.dtb
 }
 
-config_post_umount_final_image__extract_pure_ext4_image_from_partitioned_loop() {
+# 990_ should be quite late.
+config_post_umount_final_image__990_extract_pure_ext4_image_from_partitioned_loop() {
+	display_alert "Creating Android fastboot rootfs.img" "Hook Order: ${HOOK_ORDER} of ${HOOK_POINT_TOTAL_FUNCS}" "info"
 	local wanted_partition="${LOOP}p1"
 	local dest_img_file="${DEST}/images/${version}.fastboot.rootfs.img"
 	pv -N "[ .... ] dd" "${wanted_partition}" >"${dest_img_file}"

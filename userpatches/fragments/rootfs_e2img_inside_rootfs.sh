@@ -18,8 +18,10 @@ config_pre_umount_final_image__prepare_rootfs_inside_rootfs() {
 
 # No real need to compress. The file created is sparse, and ext4 works ok with those.
 # Also, xz has a ball finding double blocks in the final image.
+# Use 800_ prefix to do it quite late in game.
+config_post_umount_final_image__800_rootfs_e2img_inside_rootfs() {
+	display_alert "Including e2image rootfs-in-rootfs" "Hook Order: ${HOOK_ORDER} of ${HOOK_POINT_TOTAL_FUNCS}" "info"
 
-config_post_umount_final_image__rootfs_e2img_inside_rootfs() {
 	# to make sure its unmounted - copied from Armbian codebase, but does not really work.
 	while grep -Eq '(${MOUNT}|${DESTIMG})' /proc/mounts; do
 		display_alert "Waiting for unmount...." "${MOUNT}" "info"
@@ -45,7 +47,7 @@ config_post_umount_final_image__rootfs_e2img_inside_rootfs() {
 
 	echo -n "Copying..."
 	# pipes and sparse files don't mix. be simple about the copy, although it is huge.
-	cp "${MOUNT}/../rootfs.ext4.e2img" "${MOUNT}/root/rootfs.ext4.e2img" || {
+	cp -v "${MOUNT}/../rootfs.ext4.e2img" "${MOUNT}/root/rootfs.ext4.e2img" || {
 		echo "" # break a line so error is clearly visible
 		display_alert "e2image sparse copy failed" "sizes: apparent: ${apparent_size} actual: ${actual_size} imgsize: ${FIXED_IMAGE_SIZE}" "err"
 		display_alert "e2image sparse copy failed" "please increase ROOTFS_IN_ROOTFS_SIZE_PERCENT (currently ${ROOTFS_IN_ROOTFS_SIZE_PERCENT})" "err"
