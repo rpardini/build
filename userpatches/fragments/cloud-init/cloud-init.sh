@@ -93,6 +93,7 @@ user_config__enable_cloudinit() {
 	[[ "${DEBUG_PACKAGE_LISTS}" != "false" ]] && display_alert "Package list DEBOOTSTRAP_LIST                      (final) " "${DEBOOTSTRAP_LIST}" "info"
 	[[ "${DEBUG_PACKAGE_LISTS}" != "false" ]] && display_alert "Package list PACKAGE_LIST              (yet.to.be.aggrgtd) " "${PACKAGE_LIST}" "info"
 	[[ "${DEBUG_PACKAGE_LISTS}" != "false" ]] && display_alert "Package list PACKAGE_LIST_ADDITIONAL   (yet.to.be.aggrgtd) " "${PACKAGE_LIST_ADDITIONAL}" "info"
+	[[ "${DEBUG_PACKAGE_LISTS}" != "false" ]] && display_alert "Package list PACKAGE_LIST_FAMILY       (yet.to.be.aggrgtd) " "${PACKAGE_LIST_FAMILY}" "info"
 	[[ "${DEBUG_PACKAGE_LISTS}" != "false" ]] && display_alert "Package list PACKAGE_LIST_BOARD_REMOVE (yet.to.be.aggrgtd) " "${PACKAGE_LIST_BOARD_REMOVE}" "info"
 	[[ "${DEBUG_PACKAGE_LISTS}" != "false" ]] && display_alert "Package list PACKAGE_LIST_RM           (yet.to.be.aggrgtd) " "${PACKAGE_LIST_RM}" "info"
 	[[ "${DEBUG_PACKAGE_LISTS}" != "false" ]] && display_alert "Package list PACKAGE_LIST_EXCLUDE      (yet.to.be.aggrgtd) " "${PACKAGE_LIST_EXCLUDE}" "info"

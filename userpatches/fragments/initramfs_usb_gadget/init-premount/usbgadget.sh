@@ -16,7 +16,11 @@ usb_idVendor="0x1d6b"  # Linux Foundation
 usb_idProduct="0x104" # Ethernet Gadget.
 usb_serialnumber="Armbian"
 
-# @TODO: allow to customize this, eg via kernel cmdline
+# @TODO: allow to customize this, eg via kernel cmdline (8c:fd:f0 is Qualcomm, seems to result in 'eth1' instead of 'usb0' on the host)
+#HOST_ADDRESS="8c:fd:f0:a2:69:42"
+#DEV_ADDRESS="8c:fd:f0:a2:69:41"
+
+# @TODO: allow to customize this, eg via kernel cmdline (this seems to result in usb0 on the host)
 HOST_ADDRESS="1a:55:89:a2:69:42"
 DEV_ADDRESS="1a:55:89:a2:69:41"
 
