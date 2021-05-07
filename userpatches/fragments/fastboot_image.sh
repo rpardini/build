@@ -14,8 +14,8 @@ export ROOT_FS_LABEL="Armbian_root"
 # This could benefit from a new hook_point "do_prepare_host" that actually allowed us to install them
 user_config__200_check_android_fastboot_host_tools_installed() {
 	# Check for mkbootimg and img2simg
-	if [[ ! -f /usr/bin/mkbootimg ]] || [[ ! -f /usr/bin/img2simg ]]; then
-		display_alert "Missing Android tools needed for build" "Install with: apt install -y mkbootimg android-sdk-libsparse-utils" "err"
+	if [[ ! -f /usr/bin/mkbootimg ]] || [[ ! -f /usr/bin/img2simg ]] || [[ ! -f /usr/bin/fastboot ]]; then
+		display_alert "Missing Android tools needed for fastboot images" "Install with: apt install -y mkbootimg android-sdk-libsparse-utils fastboot" "err"
 		# @TODO: Armbian exit_with_?
 		exit 3 # Hopefully abort the build.
 	else
