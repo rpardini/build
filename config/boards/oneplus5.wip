@@ -1,4 +1,4 @@
-# OnePlus 5 "cheeseburger" - Snapdragon 835 - 4.4 big.LITTLE Kryo 280 - 6/8Gb RAM - 64/128 SCSI eMMC
+# OnePlus 5 "cheeseburger" - Snapdragon 835 - 4.4 big.LITTLE Kryo 280 - 6/8Gb RAM - 64/128 UFS 2.1
 BOARD_NAME="Oneplus 5"
 BOARDFAMILY="msm8998"
 BOOTCONFIG="none"
