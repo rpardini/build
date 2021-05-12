@@ -49,7 +49,9 @@ config_pre_umount_final_image__990_fastboot_create_boot_img() {
 
 	# Prepare the android boot.img using mkbootimg -- this probably should move into initramfs generation,
 	# create Armbian based boot.img for android fastboot.
-	create_fastboot_boot_img "boot" "$MOUNT"/boot/initrd.img-* "root=LABEL=${ROOT_FS_LABEL} console=ttyGS0,115200 console=tty1 ${deviceinfo_kernel_cmdline}"
+	# Attention: the order of console= stuff is relevant. The last one will be the one systemd spews on, and thus cloud-init as well. 
+	# @TODO: this should be better reflected in DEFAULT_CONSOLE or SERIALCON or whatever
+	create_fastboot_boot_img "boot" "$MOUNT"/boot/initrd.img-* "root=LABEL=${ROOT_FS_LABEL} console=tty1  console=ttyGS0,115200 ${deviceinfo_kernel_cmdline}"
 
 	# clean up. no need to keep intermediaries.
 	rm "$MOUNT"/boot/vmlinuz-*.gz "$MOUNT"/boot/vmlinuz.gz.dtb

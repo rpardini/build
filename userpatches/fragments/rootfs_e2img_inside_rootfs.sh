@@ -47,7 +47,7 @@ config_post_umount_final_image__800_rootfs_e2img_inside_rootfs() {
 
 	echo -n "Copying..."
 	# pipes and sparse files don't mix. be simple about the copy, although it is huge.
-	cp -v "${MOUNT}/../rootfs.ext4.e2img" "${MOUNT}/root/rootfs.ext4.e2img" || {
+	cp "${MOUNT}/../rootfs.ext4.e2img" "${MOUNT}/root/rootfs.ext4.e2img" || {
 		echo "" # break a line so error is clearly visible
 		display_alert "e2image sparse copy failed" "sizes: apparent: ${apparent_size} actual: ${actual_size} imgsize: ${FIXED_IMAGE_SIZE}" "err"
 		display_alert "e2image sparse copy failed" "please increase ROOTFS_IN_ROOTFS_SIZE_PERCENT (currently ${ROOTFS_IN_ROOTFS_SIZE_PERCENT})" "err"
