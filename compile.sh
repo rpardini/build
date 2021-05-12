@@ -264,7 +264,7 @@ CONFIG_PATH=$(dirname "${CONFIG_FILE}")
 
 # Source the fragment manager library at this point, before sourcing the config.
 # This allows early calls to add_fragment(), but initialization proper is done later.
-# shellcheck source=fragments.sh
+# shellcheck source=lib/fragments.sh
 source "${SRC}"/lib/fragments.sh
 
 display_alert "Using config file" "${CONFIG_FILE}" "info"
