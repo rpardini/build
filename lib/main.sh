@@ -437,7 +437,7 @@ prepare_host
 if [[ $IGNORE_UPDATES != yes ]]; then
 display_alert "Downloading sources" "" "info"
 
-fetch_from_repo "$BOOTSOURCE" "$BOOTDIR" "$BOOTBRANCH" "yes"
+[[ -n $BOOTSOURCE ]] && fetch_from_repo "$BOOTSOURCE" "$BOOTDIR" "$BOOTBRANCH" "yes"
 fetch_from_repo "$KERNELSOURCE" "$KERNELDIR" "$KERNELBRANCH" "yes"
 if [[ -n $ATFSOURCE ]]; then
 	fetch_from_repo "$ATFSOURCE" "$ATFDIR" "$ATFBRANCH" "yes"
@@ -461,7 +461,7 @@ done
 fi
 
 # Don't build at all if the BOOTCONFIG is 'none'.
-[[ "${BOOTCONFIG}" != "none" ]] && { 
+[[ "${BOOTCONFIG}" != "none" ]] && {
 	# Compile u-boot if packed .deb does not exist or use the one from repository
 	if [[ ! -f "${DEB_STORAGE}"/${CHOSEN_UBOOT}_${REVISION}_${ARCH}.deb ]]; then
 		if [[ -n "${ATFSOURCE}" && "${REPOSITORY_INSTALL}" != *u-boot* ]]; then
