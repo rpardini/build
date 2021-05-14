@@ -1,0 +1,47 @@
+diff --git a/scripts/package/builddeb b/scripts/package/builddeb
+index 645e64f97..42fec3230 100755
+--- a/scripts/package/builddeb
++++ b/scripts/package/builddeb
+@@ -11,6 +11,7 @@
+ # removal.
+
+ set -e
++set -x
+
+ is_enabled() {
+ 	grep -q "^$1=y" include/config/auto.conf
+@@ -51,7 +52,7 @@ EOT
+
+ 	cat >> $pdir/DEBIAN/postinst <<EOT
+ cd /boot
+-ln -sfT dtb-$version dtb 2> /dev/null || mv dtb-$version dtb
++ln -sfT dtb-$version dtb  || mv dtb-$version dtb
+ exit 0
+ EOT
+
+@@ -278,8 +279,11 @@ done
+ ##
+ sed -e "s/exit 0//g" -i $tmpdir/DEBIAN/postinst
+ cat >> $tmpdir/DEBIAN/postinst <<EOT
+-ln -sf $(basename $installed_image_path) /boot/$image_name 2> /dev/null || cp /$installed_image_path /boot/$image_name
+-touch /boot/.next
++set -x
++echo "rpardini: installed_image_path: $installed_image_path"
++echo "rpardini: image_name: $image_name"
++#ln -sf $(basename $installed_image_path) /boot/$image_name || cp /$installed_image_path /boot/$image_name
++#touch /boot/.next
+ exit 0
+ EOT
+
+diff --git a/scripts/package/mkdebian b/scripts/package/mkdebian
+index 7c6197efa..163fe2c15 100755
+--- a/scripts/package/mkdebian
++++ b/scripts/package/mkdebian
+@@ -5,6 +5,7 @@
+ # Simple script to generate a debian/ directory for a Linux kernel.
+
+ set -e
++set -x
+
+ is_enabled() {
+ 	grep -q "^$1=y" include/config/auto.conf
