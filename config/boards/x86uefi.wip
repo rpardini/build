@@ -1,0 +1,11 @@
+# x86_64 via UEFI - for development only - qemu q35 should work with virtio; armbian + -generic ubuntu kernel
+export BOARD_NAME="x86uefi"
+export BOARDFAMILY="x86"
+export BOOTCONFIG="none" # To try and convince lib/ to not build or install u-boot, separate commit
+export KERNEL_TARGET="edge"
+export FULL_DESKTOP="no"
+export SERIALCON="tty1"
+export PACKAGE_LIST_BOARD="linux-firmware linux-image-generic" # Standard Ubuntu Kernel and Firmware is will be also available
+
+add_fragment "uefi"
+add_fragment "kernel-localmodconfig"
