@@ -1,0 +1,8 @@
+# x86_64 via UEFI
+export BOARD_NAME="x86uefi"
+export BOARDFAMILY="amd64"
+export BOOTCONFIG="none"
+export KERNEL_TARGET="edge"
+export FULL_DESKTOP="no"
+export SERIALCON="tty1"
+unset BOOT_FDT_FILE
