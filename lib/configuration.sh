@@ -546,6 +546,10 @@ if [[ $DOWNLOAD_MIRROR == "bfsu" ]] ; then
 	UBUNTU_MIRROR='mirrors.bfsu.edu.cn/ubuntu-ports/'
 fi
 
+if [[ "${ARCHITECTURE}" == "x86" ]]; then
+	UBUNTU_MIRROR='archive.ubuntu.com/ubuntu' # ports are only for non-amd64, of course.
+fi
+
 # don't use mirrors that throws garbage on 404
 if [[ -z ${ARMBIAN_MIRROR} ]]; then
 	while true; do

@@ -458,6 +458,13 @@ prepare_partitions()
 
 	# default BOOTSIZE to use if not specified
 	DEFAULT_BOOTSIZE=256	# MiB
+	# size of UEFI partition. 0 for no UEFI. Don't mix UEFISIZE>0 and BOOTSIZE>0
+	UEFISIZE=${UEFISIZE:-0}
+
+	call_hook_point "pre_prepare_partitions" "prepare_partitions_custom" <<'PRE_PREPARE_PARTITIONS'
+*allow custom options for mkfs*
+Good time to change stuff like mkfs opts, types etc.
+PRE_PREPARE_PARTITIONS
 
 	# stage: determine partition configuration
 	if [[ -n $BOOTFS_TYPE ]]; then
@@ -483,16 +490,15 @@ prepare_partitions()
 		local bootpart=1
 		local rootpart=2
 		[[ -z $BOOTSIZE || $BOOTSIZE -le 8 ]] && BOOTSIZE=${DEFAULT_BOOTSIZE}
+	elif [[ $UEFISIZE -gt 0 ]]; then
+		# efi partition and ext4 root.
+		local uefipart=1
+		local rootpart=2
 	else
 		# single partition ext4 root
 		local rootpart=1
 		BOOTSIZE=0
 	fi
-
-	call_hook_point "pre_prepare_partitions" "prepare_partitions_custom" << 'PRE_PREPARE_PARTITIONS'
-*allow custom options for mkfs*
-Called after `chroot_installpackages` (_install from apt.armbian.com_) but before `customize_image` (_user customization script_).
-PRE_PREPARE_PARTITIONS
 
 	# stage: calculate rootfs size
 	local rootfs_size=$(du -sm $SDCARD/ | cut -f1) # MiB
@@ -502,8 +508,8 @@ PRE_PREPARE_PARTITIONS
 *allow dynamically determining the size based on the $rootfs_size*
 Called after `${rootfs_size}` is known, but before `${FIXED_IMAGE_SIZE}` is taken into account.
 A good spot to determine `FIXED_IMAGE_SIZE` based on `rootfs_size`.
+UEFISIZE can be set to 0 for no UEFI partition, or to a size in MiB to include one.
 PREPARE_IMAGE_SIZE
-
 
 	if [[ -n $FIXED_IMAGE_SIZE && $FIXED_IMAGE_SIZE =~ ^[0-9]+$ ]]; then
 		display_alert "Using user-defined image size" "$FIXED_IMAGE_SIZE MiB" "info"
@@ -513,7 +519,7 @@ PREPARE_IMAGE_SIZE
 			exit_with_error "User defined image size is too small" "$sdsize <= $rootfs_size"
 		fi
 	else
-		local imagesize=$(( $rootfs_size + $OFFSET + $BOOTSIZE )) # MiB
+		local imagesize=$(($rootfs_size + $OFFSET + $BOOTSIZE + $UEFISIZE)) # MiB
 		case $ROOTFS_TYPE in
 			btrfs)
 				# Used for server images, currently no swap functionality, so disk space
@@ -547,7 +553,7 @@ PREPARE_IMAGE_SIZE
 
 	# stage: calculate boot partition size
 	local bootstart=$(($OFFSET * 2048))
-	local rootstart=$(($bootstart + ($BOOTSIZE * 2048)))
+	local rootstart=$(($bootstart + ($BOOTSIZE * 2048) + ($UEFISIZE * 2048)))
 	local bootend=$(($rootstart - 1))
 
 	# stage: create partition table
@@ -555,14 +561,18 @@ PREPARE_IMAGE_SIZE
 	parted -s ${SDCARD}.raw -- mklabel ${IMAGE_PARTITION_TABLE}
 	if [[ $ROOTFS_TYPE == nfs ]]; then
 		# single /boot partition
-		parted -s ${SDCARD}.raw -- mkpart primary ${parttype[$bootfs]} ${bootstart}s 100%
+		parted -s ${SDCARD}.raw -- mkpart primary ${parttype[$bootfs]} ${bootstart}s "100%"
+	elif [[ $UEFISIZE -gt 0 ]]; then
+		# uefi partition + root partition. it re-uses bootstart and bootend since their math would be the same
+		parted -s ${SDCARD}.raw -- mkpart UEFI fat32 ${bootstart}s ${bootend}s
+		parted -s ${SDCARD}.raw -- mkpart primary ${parttype[$ROOTFS_TYPE]} ${rootstart}s "100%"
 	elif [[ $BOOTSIZE == 0 ]]; then
 		# single root partition
-		parted -s ${SDCARD}.raw -- mkpart primary ${parttype[$ROOTFS_TYPE]} ${rootstart}s 100%
+		parted -s ${SDCARD}.raw -- mkpart primary ${parttype[$ROOTFS_TYPE]} ${rootstart}s "100%"
 	else
 		# /boot partition + root partition
 		parted -s ${SDCARD}.raw -- mkpart primary ${parttype[$bootfs]} ${bootstart}s ${bootend}s
-		parted -s ${SDCARD}.raw -- mkpart primary ${parttype[$ROOTFS_TYPE]} ${rootstart}s 100%
+		parted -s ${SDCARD}.raw -- mkpart primary ${parttype[$ROOTFS_TYPE]} ${rootstart}s "100%"
 	fi
 
 	# stage: mount image
@@ -621,6 +631,14 @@ PREPARE_IMAGE_SIZE
 		mkdir -p $MOUNT/boot/
 		mount ${LOOP}p${bootpart} $MOUNT/boot/
 		echo "UUID=$(blkid -s UUID -o value ${LOOP}p${bootpart}) /boot ${mkfs[$bootfs]} defaults${mountopts[$bootfs]} 0 2" >> $SDCARD/etc/fstab
+	fi
+	if [[ -n $uefipart ]]; then
+		display_alert "Creating EFI partition" "FAT32 /boot/efi on ${LOOP}p${uefipart}"
+		check_loop_device "${LOOP}p${uefipart}"
+		mkfs.fat -F32 -n "UEFISD" ${LOOP}p${uefipart} >>"${DEST}"/debug/install.log 2>&1
+		mkdir -p $MOUNT/boot/efi
+		mount ${LOOP}p${uefipart} $MOUNT/boot/efi
+		echo "UUID=$(blkid -s UUID -o value ${LOOP}p${uefipart}) /boot/efi vfat defaults 0 2" >>$SDCARD/etc/fstab
 	fi
 	[[ $ROOTFS_TYPE == nfs ]] && echo "/dev/nfs / nfs defaults 0 0" >> $SDCARD/etc/fstab
 	echo "tmpfs /tmp tmpfs defaults,nosuid 0 0" >> $SDCARD/etc/fstab
@@ -773,8 +791,9 @@ Called before unmounting both `/root` and `/boot`.
 PRE_UMOUNT_FINAL_IMAGE
 
 
-	# unmount /boot first, rootfs second, image file last
+	# unmount /boot/efi first, then /boot, rootfs third, image file last
 	sync
+	[[ $UEFISIZE != 0 ]] && umount -l $MOUNT/boot/efi
 	[[ $BOOTSIZE != 0 ]] && umount -l $MOUNT/boot
 	[[ $ROOTFS_TYPE != nfs ]] && umount -l $MOUNT
 	[[ $CRYPTROOT_ENABLE == yes ]] && cryptsetup luksClose $ROOT_MAPPER
