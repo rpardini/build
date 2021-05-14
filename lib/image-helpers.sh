@@ -23,8 +23,7 @@
 #
 # helper to reduce code duplication
 #
-mount_chroot()
-{
+mount_chroot() {
 	local target=$1
 	mount -t proc chproc "${target}"/proc
 	mount -t sysfs chsys "${target}"/sys
@@ -36,12 +35,10 @@ mount_chroot()
 #
 # helper to reduce code duplication
 #
-umount_chroot()
-{
+umount_chroot() {
 	local target=$1
 	display_alert "Unmounting" "$target" "info"
-	while grep -Eq "${target}.*(dev|proc|sys)" /proc/mounts
-	do
+	while grep -Eq "${target}.*(dev|proc|sys)" /proc/mounts; do
 		umount -l --recursive "${target}"/dev >/dev/null 2>&1
 		umount -l "${target}"/proc >/dev/null 2>&1
 		umount -l "${target}"/sys >/dev/null 2>&1
@@ -51,8 +48,7 @@ umount_chroot()
 
 # unmount_on_exit
 #
-unmount_on_exit()
-{
+unmount_on_exit() {
 	trap - INT TERM EXIT
 	umount_chroot "${SDCARD}/"
 	umount -l "${SDCARD}"/tmp >/dev/null 2>&1
@@ -67,8 +63,7 @@ unmount_on_exit()
 
 # check_loop_device <device_node>
 #
-check_loop_device()
-{
+check_loop_device() {
 	local device=$1
 	if [[ ! -b $device ]]; then
 		if [[ $CONTAINER_COMPAT == yes && -b /tmp/$device ]]; then
@@ -86,8 +81,7 @@ check_loop_device()
 # Parameters:
 # loopdev: loop device with mounted rootfs image
 #
-write_uboot()
-{
+write_uboot() {
 	local loop=$1 revision
 	display_alert "Writing U-boot bootloader" "$loop" "info"
 	TEMP_DIR=$(mktemp -d || exit 1)
@@ -104,12 +98,11 @@ write_uboot()
 	rm -rf ${TEMP_DIR}
 } #############################################################################
 
-customize_image()
-{
+customize_image() {
 	# for users that need to prepare files at host
 	[[ -f $USERPATCHES_PATH/customize-image-host.sh ]] && source "$USERPATCHES_PATH"/customize-image-host.sh
 
-	call_hook_point "pre_customize_image" "image_tweaks_pre_customize" << 'PRE_CUSTOMIZE_IMAGE'
+	call_hook_point "pre_customize_image" "image_tweaks_pre_customize" <<'PRE_CUSTOMIZE_IMAGE'
 *run before customize-image.sh*
 This hook is called after `customize-image-host.sh` is called, but before the overlay is mounted.
 It thus can be used for the same purposes as `customize-image-host.sh`.
@@ -129,15 +122,14 @@ PRE_CUSTOMIZE_IMAGE
 		exit_with_error "customize-image.sh exited with error (rc: $CUSTOMIZE_IMAGE_RC)"
 	fi
 
-	call_hook_point "post_customize_image" "image_tweaks_post_customize" << 'POST_CUSTOMIZE_IMAGE'
+	call_hook_point "post_customize_image" "image_tweaks_post_customize" <<'POST_CUSTOMIZE_IMAGE'
 *post customize-image.sh hook*
 Run after the customize-image.sh script is run, and the overlay is unmounted.
 POST_CUSTOMIZE_IMAGE
 
 } #############################################################################
 
-install_deb_chroot()
-{
+install_deb_chroot() {
 	local package=$1
 	local variant=$2
 	local transfer=$3
@@ -156,7 +148,7 @@ install_deb_chroot()
 	[[ $NO_APT_CACHER != yes ]] && local apt_extra="-o Acquire::http::Proxy=\"http://${APT_PROXY_ADDR:-localhost:3142}\" -o Acquire::http::Proxy::localhost=\"DIRECT\""
 	# when building in bulk from remote, lets make sure we have up2date index
 	[[ $BUILD_ALL == yes && ${variant} == remote ]] && chroot "${SDCARD}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive apt-get $apt_extra -yqq update"
-	chroot "${SDCARD}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive apt-get -yqq $apt_extra --no-install-recommends install $name" >> "${DEST}"/debug/install.log 2>&1
+	chroot "${SDCARD}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive apt-get -yqq $apt_extra --no-install-recommends install $name" >>"${DEST}"/debug/install.log 2>&1
 	[[ $? -ne 0 ]] && exit_with_error "Installation of $name failed" "${BOARD} ${RELEASE} ${BUILD_DESKTOP} ${LINUXFAMILY}"
 	[[ ${variant} == remote && ${transfer} == yes ]] && rsync -rq "${SDCARD}"/var/cache/apt/archives/*.deb ${DEB_STORAGE}/
 }
