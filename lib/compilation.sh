@@ -383,13 +383,18 @@ compile_kernel() {
 	display_alert "Compiling $BRANCH kernel" "$version" "info"
 
 	# build aarch64
-	if [[ $(dpkg --print-architecture) == amd64 ]]; then
+	if [[ $(dpkg --print-architecture) == amd64 ]] && [[ "${ARCHITECTURE}" != "x86" ]]; then
 
 		local toolchain
 		toolchain=$(find_toolchain "$KERNEL_COMPILER" "$KERNEL_USE_GCC")
 		[[ -z $toolchain ]] && exit_with_error "Could not find required toolchain" "${KERNEL_COMPILER}gcc $KERNEL_USE_GCC"
 
 		# build aarch64
+	fi
+
+	# hack, when on amd64 and building for x86, reset KERNEL_COMPILER
+	if [[ $(dpkg --print-architecture) == amd64 ]] && [[ "${ARCHITECTURE}" == "x86" ]]; then
+		KERNEL_COMPILER=''
 	fi
 
 	display_alert "Compiler version" "${KERNEL_COMPILER}gcc $(eval env PATH="${toolchain}:${PATH}" "${KERNEL_COMPILER}gcc" -dumpversion)" "info"
@@ -445,6 +450,19 @@ compile_kernel() {
 		fi
 	fi
 
+	# If defined, ${KERNEL_CONFIG_FROM_LSMOD} can contain a list of lsmods to apply to the kernel.
+	if [[ "a${KERNEL_CONFIG_FROM_LSMOD}a" != "aa" ]]; then
+		# @TODO: run make localmodconfig out of the loop. concat lsmods in the loop maybe
+		for one_lsmod_ref in ${KERNEL_CONFIG_FROM_LSMOD}; do
+			echo "LSMOD: $one_lsmod_ref"
+			local lsmod_file="${SRC}/userpatches/lsmod/${one_lsmod_ref}.lsmod"
+			cat "${lsmod_file}"
+			display_alert "Applying kernel fast build config from lsmod" "$one_lsmod_ref" "info"
+			eval CCACHE_BASEDIR="$(pwd)" env PATH="${toolchain}:${PATH}" \
+				'make ARCH=$ARCHITECTURE CROSS_COMPILE="$CCACHE $KERNEL_COMPILER" LSMOD=${lsmod_file} localmodconfig'
+		done
+	fi
+
 	xz <.config >"${sources_pkg_dir}/usr/src/${LINUXCONFIG}_${version}_${REVISION}_config.xz"
 
 	echo -e "\n\t== kernel ==\n" >>"${DEST}"/debug/compilation.log
@@ -453,7 +471,7 @@ compile_kernel() {
 		CROSS_COMPILE="$CCACHE $KERNEL_COMPILER" \
 		$SRC_LOADADDR \
 		LOCALVERSION="-$LINUXFAMILY" \
-		$KERNEL_IMAGE_TYPE modules dtbs 2>>$DEST/debug/compilation.log' \
+		$KERNEL_IMAGE_TYPE ${KERNEL_EXTRA_TARGETS:-modules dtbs} 2>>$DEST/debug/compilation.log' \
 		${PROGRESS_LOG_TO_FILE:+' | tee -a $DEST/debug/compilation.log'} \
 		${OUTPUT_DIALOG:+' | dialog --backtitle "$backtitle" \
 		--progressbox "Compiling kernel..." $TTY_Y $TTY_X'} \
