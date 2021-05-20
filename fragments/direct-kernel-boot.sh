@@ -11,6 +11,9 @@ user_config__prepare_dkb() {
 
 	# get rid of packages not really applicable to DKB.
 	remove_packages_everywhere cpufrequtils fake-hwclock haveged rfkill sunxi-tools device-tree-compiler u-boot-tools
+
+	# do not write SDCARD for dkb, it makes no sense.
+	export CARD_DEVICE=""
 }
 
 # Add a label to the partition, so DKB user does not need to type/know "/dev/vda1"
@@ -19,7 +22,7 @@ prepare_partitions_custom__add_rootfs_label_to_mkfs() {
 	mkopts[ext4]="-L ${DKB_ROOT_FS_LABEL} ${mkopts[ext4]}"
 }
 
-pre_umount_final_image__capture_kernel_and_initramfs() {
+pre_umount_final_image__900_capture_kernel_and_initramfs() {
 	display_alert "Extracting Kernel and Initrd for" "Direct Kernel Boot" "info"
 
 	# disarm bomb that was planted by the bsp. @TODO: move to bsp tweaks hook
