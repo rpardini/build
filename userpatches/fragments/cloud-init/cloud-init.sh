@@ -1,3 +1,5 @@
+source "${SRC}/fragments/hack/hack-armbian-packages.sh" # Common hacks with package lists.
+
 # This fragment enables cloud-init.
 # As a side effect it removes NetworkManager and replaces it with netplan.io and the systemd/networkd renderer.
 # It sets up in a way that the user-data, meta-data and network-config reside in /boot (CLOUD_INIT_CONFIG_LOCATION)
@@ -17,9 +19,6 @@ export CLOUD_INIT_NET_CONFIG_FILE="eth0-dhcp"
 #         if you're *also* using the jumpstart module, it will use the same vars via extlinux.conf boot, for convenience.
 export KERNEL_EXTRA_CMDLINE_SD="oldskool.boottype=sd"     # Extra kernel cmdline to add to jumpstart/sd boot, before flashing to eMMC.
 export KERNEL_EXTRA_CMDLINE_EMMC="oldskool.boottype=emmc" # Extra kernel cmdline to add to emmc boot, after jumpstart.
-
-# enable for debugging, package list assembly can be confusing.
-export DEBUG_PACKAGE_LISTS=false
 
 # This runs after install_common() and chroot_installpackages_local()
 # Inside customize_image(), before running the actual custom script.
@@ -62,11 +61,7 @@ image_tweaks_pre_customize__cloud_init() {
 # not so early hook
 user_config__enable_cloudinit() {
 	CLOUD_INIT_PKGS="cloud-init cloud-initramfs-growroot eatmydata curl tree netplan.io"
-	EXTRA_WANTED_PACKAGES="lvm2 thin-provisioning-tools nfs-common kbd networkd-dispatcher"
-
-	# At this point, PACKAGE_LIST_RM is not processed yet, so we can use it to get rid of packages.
-	# DEBOOTSTRAP_LIST has been calculated already though, we can still modify it directly.
-	# DEBOOTSTRAP_LIST will be fed directly to debootstrap --include=
+	EXTRA_WANTED_PACKAGES="lvm2 thin-provisioning-tools nfs-common kbd" # networkd-dispatcher
 
 	# Release specific packages
 	export DEBOOTSTRAP_COMPONENTS="main,universe"
@@ -74,37 +69,19 @@ user_config__enable_cloudinit() {
 	# Replace ifupdown with netplan during debootstrap.
 	export DEBOOTSTRAP_LIST="${DEBOOTSTRAP_LIST//ifupdown/netplan.io} rng-tools fdisk"
 
-	# Remove stuff that makes no sense with cloud-init
-	# We could add to PACKAGE_LIST_ADDITIONAL here, it will be aggregated and processed later.
-
-	# Add some packages I will install anyway via cloud-init and that will cause a new initramfs to be generated.
-	# So we save a lot of time on first boot/first emmc flash
 	# Enable cloud-init; this changes bring-up process radically.
-	export PACKAGE_LIST_ADDITIONAL="${PACKAGE_LIST_ADDITIONAL} ${EXTRA_WANTED_PACKAGES} ${CLOUD_INIT_PKGS}"
+	export PACKAGE_LIST="${PACKAGE_LIST} ${EXTRA_WANTED_PACKAGES} ${CLOUD_INIT_PKGS}"
 
 	# Remove hostapd. Its a cloud-like image, not an access point.
 	# Note WPA-supplicant can still be used via network-config... but only as a client.
-	export PACKAGE_LIST_RM="hostapd network-manager ifenslave resolvconf ifupdown"
+	# Remove more end-user oriented stuff.
+	remove_packages_everywhere network-manager-openvpn network-manager hostapd ifenslave resolvconf ifupdown
 
 	# PACKAGE_LIST_BOARD_REMOVE runs apt-get remove later during the build. Useful if no other way to remove.
-	export PACKAGE_LIST_BOARD_REMOVE="hostapd ifupdown"
-
-	# Show lists:
-	[[ "${DEBUG_PACKAGE_LISTS}" != "false" ]] && display_alert "Package list DEBOOTSTRAP_LIST                      (final) " "${DEBOOTSTRAP_LIST}" "info"
-	[[ "${DEBUG_PACKAGE_LISTS}" != "false" ]] && display_alert "Package list PACKAGE_LIST              (yet.to.be.aggrgtd) " "${PACKAGE_LIST}" "info"
-	[[ "${DEBUG_PACKAGE_LISTS}" != "false" ]] && display_alert "Package list PACKAGE_LIST_ADDITIONAL   (yet.to.be.aggrgtd) " "${PACKAGE_LIST_ADDITIONAL}" "info"
-	[[ "${DEBUG_PACKAGE_LISTS}" != "false" ]] && display_alert "Package list PACKAGE_LIST_FAMILY       (yet.to.be.aggrgtd) " "${PACKAGE_LIST_FAMILY}" "info"
-	[[ "${DEBUG_PACKAGE_LISTS}" != "false" ]] && display_alert "Package list PACKAGE_LIST_BOARD_REMOVE (yet.to.be.aggrgtd) " "${PACKAGE_LIST_BOARD_REMOVE}" "info"
-	[[ "${DEBUG_PACKAGE_LISTS}" != "false" ]] && display_alert "Package list PACKAGE_LIST_RM           (yet.to.be.aggrgtd) " "${PACKAGE_LIST_RM}" "info"
-	[[ "${DEBUG_PACKAGE_LISTS}" != "false" ]] && display_alert "Package list PACKAGE_LIST_EXCLUDE      (yet.to.be.aggrgtd) " "${PACKAGE_LIST_EXCLUDE}" "info"
-
+	#export PACKAGE_LIST_BOARD_REMOVE="${PACKAGE_LIST_BOARD_REMOVE} hostapd ifupdown"
 }
 
-user_config_post_aggregate_packages__confirm_cloudinit_packages() {
-	# echo "Fragment: HOOK_POINT:${HOOK_POINT} HOOK_POINT_FUNCTION:${HOOK_POINT_FUNCTION}"
-	# echo "Fragment: FRAGMENT_DIR:${FRAGMENT_DIR}"
-	# echo "Fragment: FRAGMENT_FILE:${FRAGMENT_FILE}"
-
+user_config_post_aggregate_packages__900_confirm_cloudinit_packages() {
 	# Make sure the package aggregation is not insane / changed too much
 	# by checking that the final PACKAGE_LIST contains 'cloud-init' and 'netplan.io'
 	if [[ ${PACKAGE_LIST} == *"cloud-init"* ]]; then
@@ -117,15 +94,10 @@ user_config_post_aggregate_packages__confirm_cloudinit_packages() {
 	# could be nice checking that network-manager is NOT there too
 	if [[ ${PACKAGE_LIST} == *"network-manager"* ]]; then
 		display_alert "Package found in package list -- should not be!" "network-manager" "wrn"
-		read
 	else
 		display_alert "Package not being installed" "network-manager"
 	fi
 
-	# Show lists:
-	[[ "${DEBUG_PACKAGE_LISTS}" != "false" ]] && display_alert "Package list DEBOOTSTRAP_LIST          (super-final)) " "${DEBOOTSTRAP_LIST}" "info"
-	[[ "${DEBUG_PACKAGE_LISTS}" != "false" ]] && display_alert "Package list PACKAGE_LIST              (super-final)) " "${PACKAGE_LIST}" "info"
-	[[ "${DEBUG_PACKAGE_LISTS}" != "false" ]] && display_alert "Package list PACKAGE_LIST_BOARD_REMOVE (super-final)) " "${PACKAGE_LIST_BOARD_REMOVE}" "info"
 }
 
 # almost the last thing before copying to SD.
