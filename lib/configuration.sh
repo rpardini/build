@@ -112,6 +112,7 @@ ATF_COMPILE=yes
 [[ -z $CRYPTROOT_PARAMETERS ]] && CRYPTROOT_PARAMETERS="--pbkdf pbkdf2"
 [[ -z $WIREGUARD ]] && WIREGUARD="yes"
 [[ -z $EXTRAWIFI ]] && EXTRAWIFI="yes"
+[[ -z $SKIP_BOOTSPLASH ]] && SKIP_BOOTSPLASH="no"
 [[ -z $AUFS ]] && AUFS="yes"
 [[ -z $IMAGE_PARTITION_TABLE ]] && IMAGE_PARTITION_TABLE="msdos"
 
