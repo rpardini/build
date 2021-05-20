@@ -1,3 +1,5 @@
+source "${SRC}/fragments/hack/hack-armbian-packages.sh" # Common hacks with package lists.
+
 # Hooks
 user_config__add_uefi_grub_packages() {
 	export IMAGE_PARTITION_TABLE="gpt" # GPT partition table is essential for many UEFI-like implementations, eg Apple+Intel stuff.
@@ -41,19 +43,14 @@ set prefix=(\$root)'/boot/grub'
 configfile \$prefix/grub.cfg
 grubEfiCfg
 
-	## tree "${MOUNT}"/boot
-	## echo "grub: "
-	## cat "${MOUNT}"/boot/efi/EFI/BOOT/grub.cfg
-	## echo "grub.cfg: "
-	## cat "${MOUNT}"/boot/grub/grub.cfg | grep "\/boot"
-
 	umount_chroot "$chroot_target/"
 
 }
 
 configure_grub() {
+	display_alert "Grub EFI kernel cmdline" "console=${SERIALCON}" ""
 	cat <<EOF >>"${MOUNT}"/etc/default/grub.d/armbian-sd-uefi.cfg
-GRUB_CMDLINE_LINUX_DEFAULT="console=ttyS0"               # extra Kernel cmdline is configured here
+GRUB_CMDLINE_LINUX_DEFAULT="console=${SERIALCON}"        # extra Kernel cmdline is configured here
 GRUB_TIMEOUT_STYLE=menu                                  # Show the menu with Kernel options (Armbian or -generic)...
 GRUB_TIMEOUT=5                                           # ... for 5 seconds, then boot the Armbian default.
 GRUB_DISTRIBUTOR="Armbian"                               # On GRUB menu will show up as "Armbian GNU/Linux" (will show up in some UEFI BIOS boot menu (F8?) as "armbian", not on others)
