@@ -67,13 +67,13 @@ image_tweaks_pre_customize__cloud_init() {
 # not so early hook
 user_config__enable_cloudinit() {
 	CLOUD_INIT_PKGS="cloud-init cloud-initramfs-growroot eatmydata curl tree netplan.io"
-	EXTRA_WANTED_PACKAGES="lvm2 thin-provisioning-tools nfs-common kbd" # networkd-dispatcher
+	EXTRA_WANTED_PACKAGES="lvm2 thin-provisioning-tools" # networkd-dispatcher
 
 	# Release specific packages
 	export DEBOOTSTRAP_COMPONENTS="main,universe"
 
 	# Replace ifupdown with netplan during debootstrap.
-	export DEBOOTSTRAP_LIST="${DEBOOTSTRAP_LIST//ifupdown/netplan.io} rng-tools fdisk"
+	export DEBOOTSTRAP_LIST="${DEBOOTSTRAP_LIST//ifupdown/netplan.io}"
 
 	# Enable cloud-init; this changes bring-up process radically.
 	export PACKAGE_LIST="${PACKAGE_LIST} ${EXTRA_WANTED_PACKAGES} ${CLOUD_INIT_PKGS}"

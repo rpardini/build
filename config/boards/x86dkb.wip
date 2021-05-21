@@ -2,6 +2,6 @@
 export BOARD_NAME="x86dkb"
 export BOARDFAMILY="x86"
 export KERNEL_TARGET="edge"
-export SERIALCON="ttyS0" # I assume if you're using direct kernel boot, you probably have a virtio serial as well. and maybe, not have a display.
+export SERIALCON="hvc0" # I assume if you're using direct kernel boot, you probably have a virtio serial as well.
 
 add_fragment "direct-kernel-boot"
