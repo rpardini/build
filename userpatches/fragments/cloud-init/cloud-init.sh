@@ -81,7 +81,7 @@ user_config__enable_cloudinit() {
 	# Remove hostapd. Its a cloud-like image, not an access point.
 	# Note WPA-supplicant can still be used via network-config... but only as a client.
 	# Remove more end-user oriented stuff.
-	remove_packages_everywhere network-manager-openvpn network-manager hostapd ifenslave resolvconf ifupdown
+	remove_packages_everywhere network-manager-openvpn network-manager hostapd ifenslave resolvconf ifupdown vnstat
 
 	# PACKAGE_LIST_BOARD_REMOVE runs apt-get remove later during the build. Useful if no other way to remove.
 	#export PACKAGE_LIST_BOARD_REMOVE="${PACKAGE_LIST_BOARD_REMOVE} hostapd ifupdown"
