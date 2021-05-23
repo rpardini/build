@@ -10,7 +10,7 @@ config_prepare_image_size__rootfs_predict_image_size() {
 	display_alert "Predicted size of rootfs+rootfs e2img dump to be" "${FIXED_IMAGE_SIZE}Mb" "info"
 }
 
-config_pre_umount_final_image__prepare_rootfs_inside_rootfs() {
+pre_umount_final_image__prepare_rootfs_inside_rootfs() {
 	# For sure there is an Armbian env (LOOP_X?) but I didnt figure it out a the time.
 	export ROOT_LOOP_DEV_PART
 	ROOT_LOOP_DEV_PART=$(mount | grep "${MOUNT}" | grep ext4 | cut -d " " -f 1)
