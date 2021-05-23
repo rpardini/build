@@ -1,0 +1,11 @@
+# Raspberry Pi 4b
+BOARD_NAME="RPi4b"
+BOARDFAMILY="bcm2711"
+BOOTCONFIG="none"
+KERNEL_TARGET="edge"
+FULL_DESKTOP="no"
+SERIALCON="ttyAMA0"
+BOOT_FDT_FILE="broadcom/bcm2711-rpi-4-b.dtb"
+
+export PACKAGE_LIST_BOARD="rpi-eeprom raspi-config linux-tools-raspi linux-raspi linux-image-raspi linux-firmware-raspi2 flash-kernel"
+add_fragment "raspi"
