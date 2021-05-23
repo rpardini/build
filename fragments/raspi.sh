@@ -10,6 +10,12 @@ user_config__disable_kernel_compile() {
 	export BOOTSIZE=0                                  # No separate /boot when using UEFI.
 	export UEFI_MOUNT_POINT="/boot/firmware"           # mount uefi part at /boot/firmware
 	export CLOUD_INIT_CONFIG_LOCATION="/boot/firmware" # use /boot/firmware for cloud-init as well
+
+	# Packages for the board.
+	export PACKAGE_LIST_BOARD="${PACKAGE_LIST_BOARD} linux-tools-raspi linux-raspi linux-image-raspi flash-kernel"
+
+	# Packages to include in rootfs cache
+	export PACKAGE_LIST="${PACKAGE_LIST} rpi-eeprom raspi-config linux-firmware-raspi2"
 }
 
 # Add a label to the root partition - this is common, should refactor into a separate segment
@@ -37,11 +43,11 @@ pre_update_initramfs__setup_flash_kernel() {
 
 	local update_initramfs_cmd="update-initramfs -c -k all"
 	display_alert "Updating raspi initramfs..." "$update_initramfs_cmd" ""
-	chroot $chroot_target /bin/bash -c "$update_initramfs_cmd" >>"${DEST}"/debug/install.log 2>&1
+	chroot $chroot_target /bin/bash -c "$update_initramfs_cmd" #>>"${DEST}"/debug/install.log 2>&1
 
 	local flash_kernel_cmd="flash-kernel --machine 'Raspberry Pi 4 Model B'"
 	display_alert "Raspi flash-kernel" "${flash_kernel_cmd}" "info"
-	chroot $chroot_target /bin/bash -c "${flash_kernel_cmd}" >>"${DEST}"/debug/install.log 2>&1
+	chroot $chroot_target /bin/bash -c "${flash_kernel_cmd}" #>>"${DEST}"/debug/install.log 2>&1
 
 	display_alert "Re-enabling" "initramfs-tools/flash-kernel hook for kernel"
 	chroot $chroot_target /bin/bash -c "chmod -v +x /etc/kernel/postinst.d/initramfs-tools" >>"${DEST}"/debug/install.log 2>&1
