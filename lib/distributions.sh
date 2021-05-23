@@ -279,24 +279,26 @@ install_common()
 	}
 
 	# install kernel
-	if [[ "${REPOSITORY_INSTALL}" != *kernel* ]]; then
-		VER=$(dpkg --info "${DEB_STORAGE}/${CHOSEN_KERNEL}_${REVISION}_${ARCH}.deb" | grep Descr | awk '{print $(NF)}')
-		VER="${VER/-$LINUXFAMILY/}"
-		install_deb_chroot "${DEB_STORAGE}/${CHOSEN_KERNEL}_${REVISION}_${ARCH}.deb"
-		if [[ -f ${DEB_STORAGE}/${CHOSEN_KERNEL/image/dtb}_${REVISION}_${ARCH}.deb ]]; then
-			install_deb_chroot "${DEB_STORAGE}/${CHOSEN_KERNEL/image/dtb}_${REVISION}_${ARCH}.deb"
+	[[ -n $KERNELSOURCE ]] && {
+		if [[ "${REPOSITORY_INSTALL}" != *kernel* ]]; then
+			VER=$(dpkg --info "${DEB_STORAGE}/${CHOSEN_KERNEL}_${REVISION}_${ARCH}.deb" | grep Descr | awk '{print $(NF)}')
+			VER="${VER/-$LINUXFAMILY/}"
+			install_deb_chroot "${DEB_STORAGE}/${CHOSEN_KERNEL}_${REVISION}_${ARCH}.deb"
+			if [[ -f ${DEB_STORAGE}/${CHOSEN_KERNEL/image/dtb}_${REVISION}_${ARCH}.deb ]]; then
+				install_deb_chroot "${DEB_STORAGE}/${CHOSEN_KERNEL/image/dtb}_${REVISION}_${ARCH}.deb"
+			fi
+			if [[ $INSTALL_HEADERS == yes ]]; then
+				install_deb_chroot "${DEB_STORAGE}/${CHOSEN_KERNEL/image/headers}_${REVISION}_${ARCH}.deb"
+			fi
+		else
+			install_deb_chroot "linux-image-${BRANCH}-${LINUXFAMILY}" "remote"
+			VER=$(dpkg-deb -f "${SDCARD}"/var/cache/apt/archives/linux-image-${BRANCH}-${LINUXFAMILY}*_${ARCH}.deb Source)
+			VER="${VER/-$LINUXFAMILY/}"
+			VER="${VER/linux-/}"
+			install_deb_chroot "linux-dtb-${BRANCH}-${LINUXFAMILY}" "remote"
+			[[ $INSTALL_HEADERS == yes ]] && install_deb_chroot "linux-headers-${BRANCH}-${LINUXFAMILY}" "remote"
 		fi
-		if [[ $INSTALL_HEADERS == yes ]]; then
-			install_deb_chroot "${DEB_STORAGE}/${CHOSEN_KERNEL/image/headers}_${REVISION}_${ARCH}.deb"
-		fi
-	else
-		install_deb_chroot "linux-image-${BRANCH}-${LINUXFAMILY}" "remote"
-		VER=$(dpkg-deb -f "${SDCARD}"/var/cache/apt/archives/linux-image-${BRANCH}-${LINUXFAMILY}*_${ARCH}.deb Source)
-		VER="${VER/-$LINUXFAMILY/}"
-		VER="${VER/linux-/}"
-		install_deb_chroot "linux-dtb-${BRANCH}-${LINUXFAMILY}" "remote"
-		[[ $INSTALL_HEADERS == yes ]] && install_deb_chroot "linux-headers-${BRANCH}-${LINUXFAMILY}" "remote"
-	fi
+	}
 
 	call_hook_point "post_install_kernel_debs" "config_post_install_kernel_debs" << 'MARKDOWN_DOCS_FOR_HOOK'
 *allow config to do more with the installed kernel/headers*
@@ -326,13 +328,15 @@ MARKDOWN_DOCS_FOR_HOOK
 	fi
 
 	# install armbian-firmware
-	if [[ "${REPOSITORY_INSTALL}" != *armbian-firmware* ]]; then
-		if [[ -f ${DEB_STORAGE}/armbian-firmware_${REVISION}_all.deb ]]; then
-			install_deb_chroot "${DEB_STORAGE}/armbian-firmware_${REVISION}_all.deb"
+	[[ -n $KERNELSOURCE ]] && {
+		if [[ "${REPOSITORY_INSTALL}" != *armbian-firmware* ]]; then
+			if [[ -f ${DEB_STORAGE}/armbian-firmware_${REVISION}_all.deb ]]; then
+				install_deb_chroot "${DEB_STORAGE}/armbian-firmware_${REVISION}_all.deb"
+			fi
+		else
+			install_deb_chroot "armbian-firmware" "remote"
 		fi
-	else
-		install_deb_chroot "armbian-firmware" "remote"
-	fi
+	}
 
 	# install armbian-config
 	if [[ "${PACKAGE_LIST_RM}" != *armbian-config* ]]; then
