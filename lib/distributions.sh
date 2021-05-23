@@ -242,34 +242,39 @@ install_common()
 
 	cd $SRC
 
+	local apt_extra_dist=""
+	[[ $NO_APT_CACHER != yes ]] && apt_extra_dist="-o Acquire::http::Proxy=\"http://${APT_PROXY_ADDR:-localhost:3142}\" -o Acquire::http::Proxy::localhost=\"DIRECT\""
+
+
 	display_alert "Updating" "package lists"
-	chroot "${SDCARD}" /bin/bash -c "apt-get update" >> "${DEST}"/debug/install.log 2>&1
+	chroot "${SDCARD}" /bin/bash -c "apt-get ${apt_extra_dist} update" >> "${DEST}"/debug/install.log 2>&1
 
 	display_alert "Temporarily disabling" "initramfs-tools hook for kernel"
 	chroot "${SDCARD}" /bin/bash -c "chmod -v -x /etc/kernel/postinst.d/initramfs-tools" >> "${DEST}"/debug/install.log 2>&1
+	chroot "${SDCARD}" /bin/bash -c "chmod -v -x /etc/initramfs/post-update.d/flash-kernel" >> "${DEST}"/debug/install.log 2>&1
 
 	# install family packages
 	if [[ -n ${PACKAGE_LIST_FAMILY} ]]; then
 		display_alert "Installing PACKAGE_LIST_FAMILY packages" "${PACKAGE_LIST_FAMILY}"
-		chroot "${SDCARD}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive  apt-get -yqq --no-install-recommends install $PACKAGE_LIST_FAMILY" >> "${DEST}"/debug/install.log
+		chroot "${SDCARD}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive  apt-get ${apt_extra_dist} -yqq --no-install-recommends install $PACKAGE_LIST_FAMILY" >> "${DEST}"/debug/install.log
 	fi
 
 	# install board packages
 	if [[ -n ${PACKAGE_LIST_BOARD} ]]; then
 		display_alert "Installing PACKAGE_LIST_BOARD packages" "${PACKAGE_LIST_BOARD}"
-		chroot "${SDCARD}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive  apt-get -yqq --no-install-recommends install $PACKAGE_LIST_BOARD" >> "${DEST}"/debug/install.log
+		chroot "${SDCARD}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive  apt-get ${apt_extra_dist} -yqq --no-install-recommends install $PACKAGE_LIST_BOARD" >> "${DEST}"/debug/install.log
 	fi
 
 	# remove family packages
 	if [[ -n ${PACKAGE_LIST_FAMILY_REMOVE} ]]; then
 		display_alert "Removing PACKAGE_LIST_FAMILY_REMOVE packages" "${PACKAGE_LIST_FAMILY_REMOVE}"
-		chroot "${SDCARD}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive  apt-get -yqq remove --auto-remove $PACKAGE_LIST_FAMILY_REMOVE" >> "${DEST}"/debug/install.log
+		chroot "${SDCARD}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive  apt-get ${apt_extra_dist} -yqq remove --auto-remove $PACKAGE_LIST_FAMILY_REMOVE" >> "${DEST}"/debug/install.log
 	fi
 
 	# remove board packages
 	if [[ -n ${PACKAGE_LIST_BOARD_REMOVE} ]]; then
 		display_alert "Removing PACKAGE_LIST_BOARD_REMOVE packages" "${PACKAGE_LIST_BOARD_REMOVE}"
-		chroot "${SDCARD}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive  apt-get -yqq remove --auto-remove $PACKAGE_LIST_BOARD_REMOVE" >> "${DEST}"/debug/install.log
+		chroot "${SDCARD}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive  apt-get ${apt_extra_dist} -yqq remove --auto-remove $PACKAGE_LIST_BOARD_REMOVE" >> "${DEST}"/debug/install.log
 	fi
 
 	# install u-boot
