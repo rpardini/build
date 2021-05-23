@@ -927,13 +927,21 @@ POST_BUILD_IMAGE
 		# write to SD card
 		pv -p -b -r -c -N "[ .... ] dd" ${FINALDEST}/${version}.img | dd of=$CARD_DEVICE bs=1M iflag=fullblock oflag=direct status=none
 
-		# read and compare
-		display_alert "Verifying. Please wait!"
-		local ofsha=$(dd if=$CARD_DEVICE count=$(du -b ${FINALDEST}/${version}.img | cut -f1) status=none iflag=count_bytes oflag=direct | sha256sum | awk '{print $1}')
-		if [[ $ifsha == $ofsha ]]; then
-			display_alert "Writing verified" "${version}.img" "info"
-		else
-			display_alert "Writing failed" "${version}.img" "err"
+		call_hook_point "post_write_sdcard"  <<- 'POST_BUILD_IMAGE'
+		*run after writing img to sdcard*
+		After the image is written to `$CARD_DEVICE`, but before verifying it.
+		You can still set SKIP_VERIFY=yes to skip verification.
+		POST_BUILD_IMAGE
+
+		if [[ "${SKIP_VERIFY}" != "yes" ]]; then
+			# read and compare
+			display_alert "Verifying. Please wait!"
+			local ofsha=$(dd if=$CARD_DEVICE count=$(du -b ${FINALDEST}/${version}.img | cut -f1) status=none iflag=count_bytes oflag=direct | sha256sum | awk '{print $1}')
+			if [[ $ifsha == $ofsha ]]; then
+				display_alert "Writing verified" "${version}.img" "info"
+			else
+				display_alert "Writing failed" "${version}.img" "err"
+			fi
 		fi
 	elif [[ `systemd-detect-virt` == 'docker' && -n $CARD_DEVICE ]]; then
 		# display warning when we want to write sd card under Docker
