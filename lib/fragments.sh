@@ -340,7 +340,7 @@ add_fragment() {
 	# After that, we should either have fragment_file and fragment_dir, or throw.
 	if [[ ! -f "${fragment_file}" ]]; then
 		echo "ERR: Fragment problem -- cant find fragment '${fragment_name}' anywhere - called by ${BASH_SOURCE[1]}" | tee -a "${FRAGMENT_MANAGER_LOG_FILE}"
-		return 1
+		exit 17 # exit, forcibly. no way we can recover from this, and next fragments will get bogus errors as well.
 	fi
 
 	local before_function_list after_function_list new_function_list
