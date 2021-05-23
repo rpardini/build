@@ -186,7 +186,7 @@ install_common()
 		fi
 	else
 
-		[[ "${BOOTCONFIG}" != "none" ]] && { 
+		[[ "${BOOTCONFIG}" != "none" ]] && {
 			if [ -f "${USERPATCHES_PATH}/bootscripts/${bootscript_src}" ]; then
 				cp "${USERPATCHES_PATH}/bootscripts/${bootscript_src}" "${SDCARD}/boot/${bootscript_dst}"
 			else
@@ -284,7 +284,8 @@ install_common()
 	}
 
 	# install kernel
-	if [[ "${REPOSITORY_INSTALL}" != *kernel* ]]; then
+	[[ -n $KERNELSOURCE ]] && {
+		if [[ "${REPOSITORY_INSTALL}" != *kernel* ]]; then
 		VER=$(dpkg --info "${DEB_STORAGE}/${CHOSEN_KERNEL}_${REVISION}_${ARCH}.deb" | awk -F"-" '/Source:/{print $2}')
 
 		install_deb_chroot "${DEB_STORAGE}/${CHOSEN_KERNEL}_${REVISION}_${ARCH}.deb"
@@ -302,6 +303,7 @@ install_common()
 		install_deb_chroot "linux-dtb-${BRANCH}-${LINUXFAMILY}" "remote"
 		[[ $INSTALL_HEADERS == yes ]] && install_deb_chroot "linux-headers-${BRANCH}-${LINUXFAMILY}" "remote"
 	fi
+	}
 
 	call_hook_point "post_install_kernel_debs" "config_post_install_kernel_debs" << 'MARKDOWN_DOCS_FOR_HOOK'
 *allow config to do more with the installed kernel/headers*
@@ -332,13 +334,15 @@ MARKDOWN_DOCS_FOR_HOOK
 	fi
 
 	# install armbian-firmware
-	if [[ "${REPOSITORY_INSTALL}" != *armbian-firmware* ]]; then
-		if [[ -f ${DEB_STORAGE}/armbian-firmware_${REVISION}_all.deb ]]; then
-			install_deb_chroot "${DEB_STORAGE}/armbian-firmware_${REVISION}_all.deb"
+	[[ -n $KERNELSOURCE ]] && {
+		if [[ "${REPOSITORY_INSTALL}" != *armbian-firmware* ]]; then
+			if [[ -f ${DEB_STORAGE}/armbian-firmware_${REVISION}_all.deb ]]; then
+				install_deb_chroot "${DEB_STORAGE}/armbian-firmware_${REVISION}_all.deb"
+			fi
+		else
+			install_deb_chroot "armbian-firmware" "remote"
 		fi
-	else
-		install_deb_chroot "armbian-firmware" "remote"
-	fi
+	}
 
 	# install armbian-config
 	if [[ "${PACKAGE_LIST_RM}" != *armbian-config* ]]; then
@@ -412,7 +416,7 @@ FAMILY_TWEAKS
 
 	# switch to beta repository at this stage if building nightly images
 	[[ $IMAGE_TYPE == nightly ]] \
-	&& echo "deb https://beta.armbian.com $RELEASE main ${RELEASE}-utils ${RELEASE}-desktop" \
+	&& echo "deb http://beta.armbian.com $RELEASE main ${RELEASE}-utils ${RELEASE}-desktop" \
 	> "${SDCARD}"/etc/apt/sources.list.d/armbian.list
 
 	# Cosmetic fix [FAILED] Failed to start Set console font and keymap at first boot

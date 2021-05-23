@@ -438,7 +438,7 @@ if [[ $IGNORE_UPDATES != yes ]]; then
 display_alert "Downloading sources" "" "info"
 
 [[ -n $BOOTSOURCE ]] && fetch_from_repo "$BOOTSOURCE" "$BOOTDIR" "$BOOTBRANCH" "yes"
-fetch_from_repo "$KERNELSOURCE" "$KERNELDIR" "$KERNELBRANCH" "yes"
+[[ -n $KERNELSOURCE ]] && fetch_from_repo "$KERNELSOURCE" "$KERNELDIR" "$KERNELBRANCH" "yes"
 if [[ -n $ATFSOURCE ]]; then
 	fetch_from_repo "$ATFSOURCE" "$ATFDIR" "$ATFBRANCH" "yes"
 fi
@@ -475,7 +475,7 @@ fi
 if [[ ! -f ${DEB_STORAGE}/${CHOSEN_KERNEL}_${REVISION}_${ARCH}.deb ]]; then
 
 	KDEB_CHANGELOG_DIST=$RELEASE
-	[[ "${REPOSITORY_INSTALL}" != *kernel* ]] && compile_kernel
+	[[ -n $KERNELSOURCE ]] && [[ "${REPOSITORY_INSTALL}" != *kernel* ]] && compile_kernel
 
 fi
 

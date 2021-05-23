@@ -771,7 +771,9 @@ Called after rsync has synced both `/root` and `/root` on the target, but before
 PRE_UPDATE_INITRAMFS
 
 	# stage: create final initramfs
-	update_initramfs $MOUNT
+	[[ -n $KERNELSOURCE ]] && {
+		update_initramfs $MOUNT
+	}
 
 	# DEBUG: print free space
 	local freespace=$(LC_ALL=C df -h)
