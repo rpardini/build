@@ -460,6 +460,7 @@ prepare_partitions()
 	DEFAULT_BOOTSIZE=256	# MiB
 	# size of UEFI partition. 0 for no UEFI. Don't mix UEFISIZE>0 and BOOTSIZE>0
 	UEFISIZE=${UEFISIZE:-0}
+	UEFI_MOUNT_POINT=${UEFI_MOUNT_POINT:-/boot/efi}
 
 	call_hook_point "pre_prepare_partitions" "prepare_partitions_custom" <<'PRE_PREPARE_PARTITIONS'
 *allow custom options for mkfs*
@@ -564,7 +565,7 @@ PREPARE_IMAGE_SIZE
 		parted -s ${SDCARD}.raw -- mkpart primary ${parttype[$bootfs]} ${bootstart}s "100%"
 	elif [[ $UEFISIZE -gt 0 ]]; then
 		# uefi partition + root partition. it re-uses bootstart and bootend since their math would be the same
-		parted -s ${SDCARD}.raw -- mkpart UEFI fat32 ${bootstart}s ${bootend}s
+		parted -s ${SDCARD}.raw -- mkpart primary fat32 ${bootstart}s ${bootend}s
 		parted -s ${SDCARD}.raw -- mkpart primary ${parttype[$ROOTFS_TYPE]} ${rootstart}s "100%"
 	elif [[ $BOOTSIZE == 0 ]]; then
 		# single root partition
@@ -633,12 +634,12 @@ PREPARE_IMAGE_SIZE
 		echo "UUID=$(blkid -s UUID -o value ${LOOP}p${bootpart}) /boot ${mkfs[$bootfs]} defaults${mountopts[$bootfs]} 0 2" >> $SDCARD/etc/fstab
 	fi
 	if [[ -n $uefipart ]]; then
-		display_alert "Creating EFI partition" "FAT32 /boot/efi on ${LOOP}p${uefipart}"
+		display_alert "Creating EFI partition" "FAT32 ${UEFI_MOUNT_POINT} on ${LOOP}p${uefipart}"
 		check_loop_device "${LOOP}p${uefipart}"
 		mkfs.fat -F32 -n "UEFISD" ${LOOP}p${uefipart} >>"${DEST}"/debug/install.log 2>&1
-		mkdir -p $MOUNT/boot/efi
-		mount ${LOOP}p${uefipart} $MOUNT/boot/efi
-		echo "UUID=$(blkid -s UUID -o value ${LOOP}p${uefipart}) /boot/efi vfat defaults 0 2" >>$SDCARD/etc/fstab
+		mkdir -p "${MOUNT}${UEFI_MOUNT_POINT}"
+		mount ${LOOP}p${uefipart} "${MOUNT}${UEFI_MOUNT_POINT}"
+		echo "UUID=$(blkid -s UUID -o value ${LOOP}p${uefipart}) ${UEFI_MOUNT_POINT} vfat defaults 0 2" >>$SDCARD/etc/fstab
 	fi
 	[[ $ROOTFS_TYPE == nfs ]] && echo "/dev/nfs / nfs defaults 0 0" >> $SDCARD/etc/fstab
 	echo "tmpfs /tmp tmpfs defaults,nosuid 0 0" >> $SDCARD/etc/fstab
@@ -795,7 +796,7 @@ PRE_UMOUNT_FINAL_IMAGE
 
 	# unmount /boot/efi first, then /boot, rootfs third, image file last
 	sync
-	[[ $UEFISIZE != 0 ]] && umount -l $MOUNT/boot/efi
+	[[ $UEFISIZE != 0 ]] && umount -l "${MOUNT}${UEFI_MOUNT_POINT}"
 	[[ $BOOTSIZE != 0 ]] && umount -l $MOUNT/boot
 	[[ $ROOTFS_TYPE != nfs ]] && umount -l $MOUNT
 	[[ $CRYPTROOT_ENABLE == yes ]] && cryptsetup luksClose $ROOT_MAPPER
