@@ -14,16 +14,20 @@ export CLOUD_INIT_CONFIG_LOCATION="/boot" # where on the sdcard c-i will look fo
 # Change to eth0-dhcp-wait to use https:// includes in user-data, or to something else for non-ethernet devices
 export CLOUD_INIT_NET_CONFIG_FILE="eth0-dhcp"
 
-image_tweaks_pre_customize__cloud_init() {
-	cp "${FRAGMENT_DIR}"/config/cloud-cfg.yaml "${SDCARD}"/etc/cloud/cloud.cfg.d/99-armbian-boot.cfg
+pre_umount_final_image__300_prepare_cloud_init_startup() {
+	display_alert "Configuring cloud-init at" "${CLOUD_INIT_CONFIG_LOCATION}" "info"
+
+	local CI_TARGET="${MOUNT}"
+
+	cp "${FRAGMENT_DIR}"/config/cloud-cfg.yaml "${CI_TARGET}"/etc/cloud/cloud.cfg.d/99-armbian-boot.cfg
 
 	# Learn how Ubuntu does things by reading lxd docs...:
 	# https://lxd.readthedocs.io/en/latest/cloud-init
 
-	cp "${FRAGMENT_DIR}"/config/meta-data.yaml "${SDCARD}${CLOUD_INIT_CONFIG_LOCATION}"/meta-data
-	echo -e "\n\ninstance-id: armbian-${BOARD}" >>"${SDCARD}${CLOUD_INIT_CONFIG_LOCATION}"/meta-data
+	cp "${FRAGMENT_DIR}"/config/meta-data.yaml "${CI_TARGET}${CLOUD_INIT_CONFIG_LOCATION}"/meta-data
+	echo -e "\n\ninstance-id: armbian-${BOARD}" >>"${CI_TARGET}${CLOUD_INIT_CONFIG_LOCATION}"/meta-data
 
-	cp "${FRAGMENT_DIR}"/config/user-data.yaml "${SDCARD}${CLOUD_INIT_CONFIG_LOCATION}"/user-data
+	cp "${FRAGMENT_DIR}"/config/user-data.yaml "${CI_TARGET}${CLOUD_INIT_CONFIG_LOCATION}"/user-data
 
 	# This module has hook points, just like the regular Armbian build system. So fragments can influence other fragments. Neat?
 	# In this case, fragments compete to modify CLOUD_INIT_NET_CONFIG_FILE, so the ordering of the hooks is extremely important.
@@ -33,35 +37,35 @@ image_tweaks_pre_customize__cloud_init() {
 	# For now just don't write a default network-config, c-i's default/fallback detection will dhcp it anyway (and that works).
 	if [[ ${CLOUD_INIT_NET_CONFIG_FILE} == *"eth0-dhcp"* ]]; then
 		display_alert "dhcp-variant (${CLOUD_INIT_NET_CONFIG_FILE})" "written as ${CLOUD_INIT_CONFIG_LOCATION}/network-config.sample" ""
-		cp "${FRAGMENT_DIR}"/config/network-configs/${CLOUD_INIT_NET_CONFIG_FILE}.yaml "${SDCARD}${CLOUD_INIT_CONFIG_LOCATION}"/network-config.sample
+		cp "${FRAGMENT_DIR}"/config/network-configs/${CLOUD_INIT_NET_CONFIG_FILE}.yaml "${CI_TARGET}${CLOUD_INIT_CONFIG_LOCATION}"/network-config.sample
 	else
 		display_alert "Using network-config" "network-configs/${CLOUD_INIT_NET_CONFIG_FILE}.yaml" "info"
-		cp "${FRAGMENT_DIR}"/config/network-configs/${CLOUD_INIT_NET_CONFIG_FILE}.yaml "${SDCARD}${CLOUD_INIT_CONFIG_LOCATION}"/network-config
+		cp "${FRAGMENT_DIR}"/config/network-configs/${CLOUD_INIT_NET_CONFIG_FILE}.yaml "${CI_TARGET}${CLOUD_INIT_CONFIG_LOCATION}"/network-config
 	fi
 
 	# overwrite default (user-oriented) user-data with direct #include via CLOUD_INIT_USER_DATA_URL (automation oriented)
 	if [[ "a${CLOUD_INIT_USER_DATA_URL}" != "afiles" ]]; then
 		display_alert "Cloud-init user-data points directly to" "${CLOUD_INIT_USER_DATA_URL}" "wrn"
-		echo -e "#include\n${CLOUD_INIT_USER_DATA_URL}" >"${SDCARD}${CLOUD_INIT_CONFIG_LOCATION}"/user-data
+		echo -e "#include\n${CLOUD_INIT_USER_DATA_URL}" >"${CI_TARGET}${CLOUD_INIT_CONFIG_LOCATION}"/user-data
 	fi
 
 	# Configure logging for cloud-init. INFO is too little and DEBUG too much (as always)
-	cp "${FRAGMENT_DIR}"/config/debug_logging.yaml "${SDCARD}"/etc/cloud/cloud.cfg.d/05_logging.cfg
+	cp "${FRAGMENT_DIR}"/config/debug_logging.yaml "${CI_TARGET}"/etc/cloud/cloud.cfg.d/05_logging.cfg
 
 	# seed the /var/lib/cloud/seed/nocloud directory with symlinks to ${CLOUD_INIT_CONFIG_LOCATION}/*-data|config
 	# symlinks always there, be dangling or not.
-	local seed_dir="${SDCARD}"/var/lib/cloud/seed/nocloud
+	local seed_dir="${CI_TARGET}"/var/lib/cloud/seed/nocloud
 	mkdir -p "${seed_dir}"
 	ln -s "${CLOUD_INIT_CONFIG_LOCATION}/network-config" "${seed_dir}"/network-config
 	ln -s "${CLOUD_INIT_CONFIG_LOCATION}/user-data" "${seed_dir}"/user-data
 	ln -s "${CLOUD_INIT_CONFIG_LOCATION}/meta-data" "${seed_dir}"/meta-data
 
 	# remove any networkd config leftover from armbian build
-	rm -f "${SDCARD}"/etc/systemd/network/*.network || true
+	rm -f "${CI_TARGET}"/etc/systemd/network/*.network || true
 
 	# cleanup -- cloud-init makes some Armbian stuff actually get in the way
-	[[ -f "${SDCARD}/boot/armbian_first_run.txt.template" ]] && rm -f "${SDCARD}/boot/armbian_first_run.txt.template"
-	[[ -f "${SDCARD}/root/.not_logged_in_yet" ]] && rm -f "${SDCARD}/root/.not_logged_in_yet"
+	[[ -f "${CI_TARGET}/boot/armbian_first_run.txt.template" ]] && rm -f "${CI_TARGET}/boot/armbian_first_run.txt.template"
+	[[ -f "${CI_TARGET}/root/.not_logged_in_yet" ]] && rm -f "${CI_TARGET}/root/.not_logged_in_yet"
 }
 
 # not so early hook
