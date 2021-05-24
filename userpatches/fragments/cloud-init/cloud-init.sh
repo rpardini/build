@@ -7,6 +7,7 @@ source "${SRC}/fragments/hack/hack-armbian-packages.sh" # Common hacks with pack
 # cloud providers allow setting user-data, but provide network-config and meta-data themselves; here we try
 
 # Config for cloud-init.
+export SKIP_CLOUD_INIT_CONFIG="no"        # if yes, installs but does not configure anything.
 export CLOUD_INIT_USER_DATA_URL="files"   # "files" to use config files, or an URL to go straight to it
 export CLOUD_INIT_CONFIG_LOCATION="/boot" # where on the sdcard c-i will look for user-data, network-config, meta-data files
 
@@ -15,6 +16,16 @@ export CLOUD_INIT_CONFIG_LOCATION="/boot" # where on the sdcard c-i will look fo
 export CLOUD_INIT_NET_CONFIG_FILE="eth0-dhcp"
 
 pre_umount_final_image__300_prepare_cloud_init_startup() {
+	# remove any networkd config leftover from armbian build
+	rm -f "${CI_TARGET}"/etc/systemd/network/*.network || true
+
+	# cleanup -- cloud-init makes some Armbian stuff actually get in the way
+	[[ -f "${CI_TARGET}/boot/armbian_first_run.txt.template" ]] && rm -f "${CI_TARGET}/boot/armbian_first_run.txt.template"
+	[[ -f "${CI_TARGET}/root/.not_logged_in_yet" ]] && rm -f "${CI_TARGET}/root/.not_logged_in_yet"
+
+	# if disabled skip configuration
+	[[ "${SKIP_CLOUD_INIT_CONFIG}" == "yes" ]] && return 0
+
 	display_alert "Configuring cloud-init at" "${CLOUD_INIT_CONFIG_LOCATION}" "info"
 
 	local CI_TARGET="${MOUNT}"
@@ -59,13 +70,6 @@ pre_umount_final_image__300_prepare_cloud_init_startup() {
 	ln -s "${CLOUD_INIT_CONFIG_LOCATION}/network-config" "${seed_dir}"/network-config
 	ln -s "${CLOUD_INIT_CONFIG_LOCATION}/user-data" "${seed_dir}"/user-data
 	ln -s "${CLOUD_INIT_CONFIG_LOCATION}/meta-data" "${seed_dir}"/meta-data
-
-	# remove any networkd config leftover from armbian build
-	rm -f "${CI_TARGET}"/etc/systemd/network/*.network || true
-
-	# cleanup -- cloud-init makes some Armbian stuff actually get in the way
-	[[ -f "${CI_TARGET}/boot/armbian_first_run.txt.template" ]] && rm -f "${CI_TARGET}/boot/armbian_first_run.txt.template"
-	[[ -f "${CI_TARGET}/root/.not_logged_in_yet" ]] && rm -f "${CI_TARGET}/root/.not_logged_in_yet"
 }
 
 # not so early hook
