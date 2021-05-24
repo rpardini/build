@@ -5,3 +5,4 @@ export KERNEL_TARGET="edge"
 export SERIALCON="hvc0" # I assume if you're using direct kernel boot, you probably have a virtio serial as well.
 
 add_fragment "direct-kernel-boot"
+export UBUNTU_KERNEL=yes # use Ubuntu kernel, dont build our own.

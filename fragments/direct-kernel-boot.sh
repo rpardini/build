@@ -2,6 +2,7 @@ source "${SRC}/fragments/hack/hack-armbian-packages.sh" # Common hacks with pack
 
 # Config
 export DKB_ROOT_FS_LABEL="armbian"
+export UBUNTU_KERNEL=no # if yes, does not build our own kernel, instead, uses one from Ubuntu.
 
 # Hooks
 user_config__prepare_dkb() {
@@ -14,6 +15,35 @@ user_config__prepare_dkb() {
 
 	# do not write SDCARD for dkb, it makes no sense.
 	export CARD_DEVICE=""
+
+	# disable most of cloud-config configuration (not install)
+	export SKIP_CLOUD_INIT_CONFIG=yes
+
+	if [[ "${UBUNTU_KERNEL}" == "yes" ]]; then
+		export VER="generic"
+		export PACKAGE_LIST_BOARD="${PACKAGE_LIST_BOARD} linux-firmware linux-image-generic"
+		unset KERNELSOURCE # This should make Armbian skip most stuff. At least, I hacked it to.
+	fi
+}
+
+pre_umount_final_image__disable_uboot_initramfs() {
+	# disarm bomb that was planted by the bsp. @TODO: move to bsp tweaks hook
+	rm -f "$MOUNT"/etc/initramfs/post-update.d/99-uboot
+}
+
+pre_update_initramfs__initrd_all_kernels() {
+	[[ "${UBUNTU_KERNEL}" != "yes" ]] && return 0
+
+	local chroot_target=$MOUNT
+	cp /usr/bin/$QEMU_BINARY $chroot_target/usr/bin/
+	mount_chroot "$chroot_target/" # this already handles /boot/firmware which is required for it to work.
+	local update_initramfs_cmd="update-initramfs -c -k all"
+	display_alert "Updating raspi initramfs..." "$update_initramfs_cmd" ""
+	chroot $chroot_target /bin/bash -c "$update_initramfs_cmd" #>>"${DEST}"/debug/install.log 2>&1
+	display_alert "Re-enabling" "initramfs-tools hook for kernel"
+	chroot $chroot_target /bin/bash -c "chmod -v +x /etc/kernel/postinst.d/initramfs-tools" >>"${DEST}"/debug/install.log 2>&1
+	umount_chroot "$chroot_target/"
+	rm $chroot_target/usr/bin/$QEMU_BINARY
 }
 
 # Add a label to the partition, so DKB user does not need to type/know "/dev/vda1"
@@ -38,4 +68,12 @@ pre_umount_final_image__900_capture_kernel_and_initramfs() {
 	# export the names for example cmdline to run later.
 	export DKB_KERNEL="${dest_kernel}"
 	export DKB_INITRD="${dest_initrd}"
+
+}
+
+post_build_image__900_convert_to_qcow2_img() {
+	display_alert "Converting image to qcow2" "Direct Kernel Boot" "info"
+
+	# Convert the image to qcow2...
+	qemu-img convert -f raw -O qcow2 ${FINALDEST}/${version}.img ${FINALDEST}/${version}.img.qcow2
 }
