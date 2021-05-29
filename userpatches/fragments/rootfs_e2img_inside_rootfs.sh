@@ -25,16 +25,17 @@ config_post_umount_final_image__800_rootfs_e2img_inside_rootfs() {
 	# to make sure its unmounted - copied from Armbian codebase, but does not really work.
 	while grep -Eq '(${MOUNT}|${DESTIMG})' /proc/mounts; do
 		display_alert "Waiting for unmount...." "${MOUNT}" "info"
-		sleep 1 && sync
+		sync && sleep 5 && sync
 	done
 
 	#make sure it is completely clean...
 	display_alert "fsck" "${ROOT_LOOP_DEV_PART}" "info"
 	fsck.ext4 -y "${ROOT_LOOP_DEV_PART}" >/dev/null 2>&1
+	sync && sleep 5 && sync
 
 	display_alert "e2image dumping" "${ROOT_LOOP_DEV_PART}" "info"
 	e2image -rap "${ROOT_LOOP_DEV_PART}" "${MOUNT}/../rootfs.ext4.e2img" >/dev/null 2>&1
-	sync
+	sync && sleep 5 && sync
 
 	local apparent_size actual_size
 	apparent_size=$(du -h --apparent-size "${MOUNT}/../rootfs.ext4.e2img" | tr -s "\t" "|" | cut -d "|" -f 1)
@@ -52,7 +53,7 @@ config_post_umount_final_image__800_rootfs_e2img_inside_rootfs() {
 		display_alert "e2image sparse copy failed" "sizes: apparent: ${apparent_size} actual: ${actual_size} imgsize: ${FIXED_IMAGE_SIZE}" "err"
 		display_alert "e2image sparse copy failed" "please increase ROOTFS_IN_ROOTFS_SIZE_PERCENT (currently ${ROOTFS_IN_ROOTFS_SIZE_PERCENT})" "err"
 	}
-	sync
+	sync && sleep 5 && sync
 
 	echo -n "Unmount..."
 	umount "${MOUNT}" && sync
