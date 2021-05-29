@@ -75,7 +75,7 @@ pre_umount_final_image__300_prepare_cloud_init_startup() {
 # not so early hook
 user_config__enable_cloudinit() {
 	CLOUD_INIT_PKGS="cloud-init cloud-initramfs-growroot eatmydata curl tree netplan.io"
-	EXTRA_WANTED_PACKAGES="lvm2 thin-provisioning-tools" # networkd-dispatcher
+	EXTRA_WANTED_PACKAGES="lvm2 thin-provisioning-tools systemd-timesyncd" # networkd-dispatcher
 
 	# Release specific packages
 	export DEBOOTSTRAP_COMPONENTS="main,universe"
@@ -89,7 +89,7 @@ user_config__enable_cloudinit() {
 	# Remove hostapd. Its a cloud-like image, not an access point.
 	# Note WPA-supplicant can still be used via network-config... but only as a client.
 	# Remove more end-user oriented stuff.
-	remove_packages_everywhere network-manager-openvpn network-manager hostapd ifenslave resolvconf ifupdown vnstat
+	remove_packages_everywhere network-manager-openvpn network-manager hostapd ifenslave resolvconf ifupdown vnstat chrony
 
 	# PACKAGE_LIST_BOARD_REMOVE runs apt-get remove later during the build. Useful if no other way to remove.
 	#export PACKAGE_LIST_BOARD_REMOVE="${PACKAGE_LIST_BOARD_REMOVE} hostapd ifupdown"

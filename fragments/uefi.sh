@@ -1,16 +1,26 @@
 source "${SRC}/fragments/hack/hack-armbian-packages.sh" # Common hacks with package lists.
 
+# Config
+export UBUNTU_KERNEL=no # if yes, does not build our own kernel, instead, uses one from Ubuntu.
+
 # Hooks
 user_config__add_uefi_grub_packages() {
-	export IMAGE_PARTITION_TABLE="gpt" # GPT partition table is essential for many UEFI-like implementations, eg Apple+Intel stuff.
-	export UEFISIZE=256                # in MiB - grub EFI is tiny - but some EFI BIOSes ignore small too small EFI partitions
-	export BOOTSIZE=0                  # No separate /boot when using UEFI.
+	export IMAGE_PARTITION_TABLE="gpt"            # GPT partition table is essential for many UEFI-like implementations, eg Apple+Intel stuff.
+	export UEFISIZE=256                           # in MiB - grub EFI is tiny - but some EFI BIOSes ignore small too small EFI partitions
+	export BOOTSIZE=0                             # No separate /boot when using UEFI.
+	export CLOUD_INIT_CONFIG_LOCATION="/boot/efi" # use /boot/efi for cloud-init as well
 
 	# This works for Ubuntu hirsute at least, but may be different for others, PR it in when you try Debian
 	local UEFI_PACKAGES="os-prober grub-efi-amd64 grub-efi grub-efi-amd64-bin efibootmgr efivar"
 
 	# Include in PACKAGE_LIST, so it gets cached in rootfs
 	export PACKAGE_LIST="${PACKAGE_LIST} ${UEFI_PACKAGES}"
+
+	if [[ "${UBUNTU_KERNEL}" == "yes" ]]; then
+		export VER="generic"
+		export PACKAGE_LIST_BOARD="${PACKAGE_LIST_BOARD} linux-firmware linux-image-generic"
+		unset KERNELSOURCE # This should make Armbian skip most stuff. At least, I hacked it to.
+	fi
 }
 
 # @TODO: need a way to disable original initramfs creation, since that is a waste, I need to rebuild for all kernels anyway.
