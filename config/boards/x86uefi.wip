@@ -3,6 +3,6 @@ export BOARD_NAME="x86uefi"
 export BOARDFAMILY="x86"
 export KERNEL_TARGET="edge"
 export SERIALCON="tty1"
-export PACKAGE_LIST_BOARD="linux-firmware linux-image-generic" # Standard Ubuntu Kernel and Firmware is will be also available
 
 add_fragment "uefi"
+export UBUNTU_KERNEL=yes # use Ubuntu kernel, dont build our own.

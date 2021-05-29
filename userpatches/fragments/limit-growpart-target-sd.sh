@@ -9,5 +9,7 @@ export GROW_LIMIT_GB=16 # adds a partition of the device that wont allow growpar
 post_write_sdcard__create_growmarker_partition() {
 	display_alert "Creating growmarker partition" "${CARD_DEVICE}" "info"
 	sync # wait for the flashing to finish
-	parted -s "${CARD_DEVICE}" -- mkpart primary ext4 $((GROW_LIMIT_GB * 1024))MiB $(((GROW_LIMIT_GB * 1024) + 1))MiB &>/dev/null || echo "Failed creating growmaker partition on ${CARD_DEVICE}"
+	parted -s "${CARD_DEVICE}" -- mkpart primary ext4 $((GROW_LIMIT_GB * 1024))MiB $(((GROW_LIMIT_GB * 1024) + 1))MiB || echo "Failed creating growmaker partition on ${CARD_DEVICE}"
 }
+
+# parted -s "/dev/sda" -- mkpart primary ext4 $((24 * 1024))MiB $(((24 * 1024) + 1))MiB
