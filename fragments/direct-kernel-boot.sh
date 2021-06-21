@@ -37,9 +37,10 @@ pre_update_initramfs__initrd_all_kernels() {
 
 	local chroot_target=$MOUNT
 	cp /usr/bin/$QEMU_BINARY $chroot_target/usr/bin/
+	rm "$MOUNT"/etc/initramfs/post-update.d/99-uboot || true # @TODO: again, should not even have been included in the BSP.
 	mount_chroot "$chroot_target/" # this already handles /boot/firmware which is required for it to work.
 	local update_initramfs_cmd="update-initramfs -c -k all"
-	display_alert "Updating raspi initramfs..." "$update_initramfs_cmd" ""
+	display_alert "Updating DKB initramfs..." "$update_initramfs_cmd" ""
 	chroot $chroot_target /bin/bash -c "$update_initramfs_cmd" #>>"${DEST}"/debug/install.log 2>&1
 	display_alert "Re-enabling" "initramfs-tools hook for kernel"
 	chroot $chroot_target /bin/bash -c "chmod -v +x /etc/kernel/postinst.d/initramfs-tools" >>"${DEST}"/debug/install.log 2>&1
