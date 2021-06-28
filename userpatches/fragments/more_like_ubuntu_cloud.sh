@@ -1,3 +1,14 @@
+source "${SRC}/fragments/hack/hack-armbian-packages.sh" # Common hacks with package lists.
+
+### Hooks
+# Remove packages that dont belong in a cloud image.
+# Wifi, Chrony, etc.
+user_config__remove_uncloudlike_packages() {
+	display_alert "Removing" "uncloudlike packages: wifi, chrony, etc."
+	remove_packages_everywhere chrony unattended-upgrades wpasupplicant rng-tools networkd-dispatcher iw crda wireless-regdb hping3 selinux-policy-default dkms vnstat packagekit policykit-1
+	export PACKAGE_LIST_BOARD="${PACKAGE_LIST_BOARD} systemd-timesyncd" # chrony does not play well with systemd / qemu-agent.
+}
+
 # Tweak the BSP, removing a bunch of stuff that's great for interactive end-users and memory-deprived systems,
 # but not so much for something is is provisioned like a cloud instance.
 post_family_tweaks_bsp__be_more_like_ubuntu_cloud() {
