@@ -11,8 +11,7 @@ user_config__prepare_dkb() {
 	export COMPRESS_OUTPUTIMAGE=img    # Just the image, please.
 
 	# get rid of packages not really applicable to DKB.
-	remove_packages_everywhere cpufrequtils fake-hwclock haveged rfkill sunxi-tools device-tree-compiler u-boot-tools kbd chrony
-	export PACKAGE_LIST_BOARD="${PACKAGE_LIST_BOARD} systemd-timesyncd" # chrony does not play well with systemd / qemu-agent.
+	remove_packages_everywhere cpufrequtils fake-hwclock haveged rfkill sunxi-tools device-tree-compiler u-boot-tools kbd
 
 	# do not write SDCARD for dkb, it makes no sense.
 	export CARD_DEVICE=""
