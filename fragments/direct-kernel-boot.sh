@@ -27,17 +27,22 @@ user_config__prepare_dkb() {
 	fi
 }
 
+post_family_tweaks_bsp__do_not_use_uboot_initramfs() {
+	display_alert "BSP removing" "99-uboot hook"
+	rm "$destination"/etc/initramfs/post-update.d/99-uboot || true
+}
+
 pre_umount_final_image__disable_uboot_initramfs() {
-	# disarm bomb that was planted by the bsp. @TODO: move to bsp tweaks hook
-	rm -f "$MOUNT"/etc/initramfs/post-update.d/99-uboot
+	[[ -f "$MOUNT"/etc/initramfs/post-update.d/99-uboot ]] && display_alert "u-boot customization should not be in BSP" "/etc/initramfs/post-update.d/99-uboot" "err"
 }
 
 pre_update_initramfs__initrd_all_kernels() {
 	[[ "${UBUNTU_KERNEL}" != "yes" ]] && return 0
 
+	[[ -f "$MOUNT"/etc/initramfs/post-update.d/99-uboot ]] && display_alert "u-boot customization should not exist" "/etc/initramfs/post-update.d/99-uboot" "err"
+
 	local chroot_target=$MOUNT
 	cp /usr/bin/$QEMU_BINARY $chroot_target/usr/bin/
-	rm "$MOUNT"/etc/initramfs/post-update.d/99-uboot || true # @TODO: again, should not even have been included in the BSP.
 	mount_chroot "$chroot_target/" # this already handles /boot/firmware which is required for it to work.
 	local update_initramfs_cmd="update-initramfs -c -k all"
 	display_alert "Updating DKB initramfs..." "$update_initramfs_cmd" ""
