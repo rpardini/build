@@ -1092,7 +1092,7 @@ prepare_host()
 	grep -q i386 <(dpkg --print-foreign-architectures) || dpkg --add-architecture i386
 # build aarch64
   fi
-  
+
 	if systemd-detect-virt -q -c; then
 		display_alert "Running in container" "$(systemd-detect-virt)" "info"
 		# disable apt-cacher unless NO_APT_CACHER=no is not specified explicitly
@@ -1189,8 +1189,6 @@ prepare_host()
 	# download external Linaro compiler and missing special dependencies since they are needed for certain sources
 
 	local toolchains=(
-		"${ARMBIAN_MIRROR}/_toolchain/gcc-linaro-aarch64-none-elf-4.8-2013.11_linux.tar.xz"
-		"${ARMBIAN_MIRROR}/_toolchain/gcc-linaro-arm-none-eabi-4.8-2014.04_linux.tar.xz"
 		"${ARMBIAN_MIRROR}/_toolchain/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux.tar.xz"
 		"${ARMBIAN_MIRROR}/_toolchain/gcc-linaro-7.4.1-2019.02-x86_64_arm-linux-gnueabi.tar.xz"
 		"${ARMBIAN_MIRROR}/_toolchain/gcc-linaro-7.4.1-2019.02-x86_64_aarch64-linux-gnu.tar.xz"

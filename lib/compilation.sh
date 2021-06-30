@@ -146,14 +146,6 @@ compile_uboot()
 	toolchain=$(find_toolchain "$UBOOT_COMPILER" "$UBOOT_USE_GCC")
 	[[ -z $toolchain ]] && exit_with_error "Could not find required toolchain" "${UBOOT_COMPILER}gcc $UBOOT_USE_GCC"
 
-	if [[ -n $UBOOT_TOOLCHAIN2 ]]; then
-		local toolchain2_type toolchain2_ver toolchain2
-		toolchain2_type=$(cut -d':' -f1 <<< "${UBOOT_TOOLCHAIN2}")
-		toolchain2_ver=$(cut -d':' -f2 <<< "${UBOOT_TOOLCHAIN2}")
-		toolchain2=$(find_toolchain "$toolchain2_type" "$toolchain2_ver")
-		[[ -z $toolchain2 ]] && exit_with_error "Could not find required toolchain" "${toolchain2_type}gcc $toolchain2_ver"
-	fi
-
 # build aarch64
   fi
 
@@ -226,9 +218,7 @@ compile_uboot()
 		[[ $BOOTDELAY == 0 ]] && echo -e "CONFIG_ZERO_BOOTDELAY_CHECK=y" >> .config
 		[[ -n $BOOTDELAY ]] && sed -i "s/^CONFIG_BOOTDELAY=.*/CONFIG_BOOTDELAY=${BOOTDELAY}/" .config || [[ -f .config ]] && echo "CONFIG_BOOTDELAY=${BOOTDELAY}" >> .config
 
-		# workaround when two compilers are needed
 		cross_compile="CROSS_COMPILE=$CCACHE $UBOOT_COMPILER";
-		[[ -n $UBOOT_TOOLCHAIN2 ]] && cross_compile="ARMBIAN=foe"; # empty parameter is not allowed
 
 		echo -e "\n\t== u-boot make $target_make ==\n" >> "${DEST}"/debug/compilation.log
 		eval CCACHE_BASEDIR="$(pwd)" env PATH="${toolchain}:${toolchain2}:${PATH}" \
