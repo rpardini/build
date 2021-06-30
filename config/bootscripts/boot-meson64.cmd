@@ -78,6 +78,12 @@ setenv maxcpus "4"
 
 # Show what uboot default fdtfile is
 echo "U-boot default fdtfile: ${fdtfile}"
+echo "Current variant: ${variant}"
+# there is a mismatch between u-boot and kernel in the n2-plus/n2_plus DTB filename.
+if test "${variant}" = "n2_plus"; then
+	setenv fdtfile "amlogic/meson-g12b-odroid-n2-plus.dtb"
+	echo "For variant ${variant}, set default fdtfile: ${fdtfile}"
+fi
 
 # legacy kernel values from boot.ini
 
@@ -92,12 +98,6 @@ if test "${devtype}" = "mmc"; then part uuid mmc ${devnum}:1 partuuid; fi
 if test "${console}" = "display"; then setenv consoleargs "console=tty1"; fi
 
 echo "Current fdtfile after armbianEnv: ${fdtfile}"
-echo "Current variant: ${variant}"
-# test for odroid n2_plus and hack dtb filename. the non-plus variant has a correct default fdt?
-if test "${variant}" = "n2_plus"; then
-	setenv fdtfile "amlogic/meson-g12b-odroid-n2-plus.dtb"
-	echo "For variant ${variant}, set fdtfile: ${fdtfile}"
-fi
 
 if test -e ${devtype} ${devnum} ${prefix}zImage; then
 	# legacy kernel boot
