@@ -782,6 +782,7 @@ grab_version()
 #
 find_toolchain()
 {
+	[[ "${SKIP_EXTERNAL_TOOLCHAINS}" == "yes" ]] && { echo "/usr/bin"; return; }
 	local compiler=$1
 	local expression=$2
 	local dist=10

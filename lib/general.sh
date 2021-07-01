@@ -1185,8 +1185,10 @@ prepare_host()
 # build aarch64
   if [[ $(dpkg --print-architecture) == amd64 ]]; then
 
-	display_alert "Checking for external GCC compilers" "" "info"
-	# download external Linaro compiler and missing special dependencies since they are needed for certain sources
+	if [[ "${SKIP_EXTERNAL_TOOLCHAINS}" != "yes" ]]; then
+
+		display_alert "Checking for external GCC compilers" "" "info"
+		# download external Linaro compiler and missing special dependencies since they are needed for certain sources
 
 	local toolchains=(
 		"${ARMBIAN_MIRROR}/_toolchain/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux.tar.xz"
@@ -1219,6 +1221,9 @@ prepare_host()
 			rm -rf "${SRC}/cache/toolchain/${dir}"
 		fi
 	done
+	else
+		display_alert "Skipped external GCC compilers" "using system gcc" ""
+	fi
 
 	fi # check offline
 
