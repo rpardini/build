@@ -3,8 +3,6 @@ BOARD_NAME="RPi4b"
 BOARDFAMILY="bcm2711"
 BOOTCONFIG="none"
 KERNEL_TARGET="edge"
-FULL_DESKTOP="no"
-SERIALCON="ttyAMA0"
-BOOT_FDT_FILE="broadcom/bcm2711-rpi-4-b.dtb"
 
+# too many hacks to make this work, move to a fragment where we use ubuntu's kernel and flash-kernel
 add_fragment "raspi"

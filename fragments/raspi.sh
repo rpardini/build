@@ -6,6 +6,8 @@ export RASPI_KERNEL_PACKAGES="rpi-eeprom raspi-config linux-firmware-raspi2 linu
 export RASPI_FLASH_PACKAGES="flash-kernel"
 export RASPI_MACHINE_MODEL="Raspberry Pi 4 Model B"
 
+# @TODO: refactor, split into use-ubuntu-kernel (also for x86) and use-flash-kernel
+
 # Hooks
 user_config__disable_kernel_compile() {
 	unset KERNELSOURCE                                 # This should make Armbian skip most stuff. At least, I hacked it to.
