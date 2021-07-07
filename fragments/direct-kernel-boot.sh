@@ -13,6 +13,8 @@ user_config__prepare_dkb() {
 	# get rid of packages not really applicable to DKB.
 	remove_packages_everywhere cpufrequtils fake-hwclock haveged rfkill sunxi-tools device-tree-compiler u-boot-tools kbd
 
+	# @TODO: Hmm. Errors on arm64 buildhost if armbian-config is NOT included above, why?
+
 	# do not write SDCARD for dkb, it makes no sense.
 	export CARD_DEVICE=""
 
@@ -25,6 +27,19 @@ user_config__prepare_dkb() {
 		unset KERNELSOURCE # This should make Armbian skip most stuff. At least, I hacked it to.
 	fi
 }
+
+# Early check for host-side tools needed.
+# This could benefit from a new hook_point "do_prepare_host" that actually allowed us to install them
+user_config__200_qemu_host_tools_installed() {
+	if [[ ! -f /usr/bin/qemu-img ]] ; then
+		display_alert "Missing QEMU tools needed for dkb images" "Install with: apt install -y qemu-utils" "err"
+		# @TODO: Armbian exit_with_?
+		exit 3 # Hopefully abort the build.
+	else
+		display_alert "QEMU tooling" "ok" "info"
+	fi
+}
+
 
 post_family_tweaks_bsp__do_not_use_uboot_initramfs() {
 	display_alert "BSP removing" "99-uboot hook"
