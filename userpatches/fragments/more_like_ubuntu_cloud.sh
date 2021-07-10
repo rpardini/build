@@ -5,7 +5,9 @@ source "${SRC}/fragments/hack/hack-armbian-packages.sh" # Common hacks with pack
 # Wifi, Chrony, etc.
 user_config__remove_uncloudlike_packages() {
 	display_alert "Removing" "uncloudlike packages: wifi, chrony, etc."
-	remove_packages_everywhere chrony unattended-upgrades wpasupplicant rng-tools networkd-dispatcher iw crda wireless-regdb hping3 selinux-policy-default dkms vnstat packagekit policykit-1
+	# crda is needed for linux-modules-extra which is essential albeit the name
+	# crda in turn depends on iw, wireless-regdb
+	remove_packages_everywhere chrony unattended-upgrades wpasupplicant rng-tools networkd-dispatcher hping3 selinux-policy-default dkms vnstat packagekit policykit-1
 	export PACKAGE_LIST_BOARD="${PACKAGE_LIST_BOARD} systemd-timesyncd" # chrony does not play well with systemd / qemu-agent.
 }
 
