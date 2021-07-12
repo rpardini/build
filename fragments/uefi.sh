@@ -11,7 +11,8 @@ user_config__add_uefi_grub_packages() {
 	export CLOUD_INIT_CONFIG_LOCATION="/boot/efi" # use /boot/efi for cloud-init as well
 
 	# This works for Ubuntu hirsute at least, but may be different for others, PR it in when you try Debian
-	local UEFI_PACKAGES="os-prober grub-efi-amd64 grub-efi grub-efi-amd64-bin efibootmgr efivar"
+	# grub-efi ? only for amd64
+	local UEFI_PACKAGES="os-prober grub-efi-${ARCH} grub-efi-${ARCH}-bin efibootmgr efivar"
 
 	# Include in PACKAGE_LIST, so it gets cached in rootfs
 	export PACKAGE_LIST="${PACKAGE_LIST} ${UEFI_PACKAGES}"

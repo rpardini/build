@@ -1,0 +1,13 @@
+# x86_64 via UEFI - for development only - qemu q35 should work with virtio; armbian + -generic ubuntu kernel
+export BOARD_NAME="uefiarm64"
+export BOARDFAMILY="arm64-uefi"
+export KERNEL_TARGET="edge"
+
+# console on VGA
+#export SERIALCON="tty1"
+
+add_fragment "uefi"
+export UBUNTU_KERNEL=yes # use Ubuntu kernel, dont build our own.
+
+# For ORACLE cloud vm
+export SERIALCON="ttyAMA0"
