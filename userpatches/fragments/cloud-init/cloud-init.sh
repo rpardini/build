@@ -10,6 +10,7 @@ source "${SRC}/fragments/hack/hack-armbian-packages.sh" # Common hacks with pack
 export SKIP_CLOUD_INIT_CONFIG="no"        # if yes, installs but does not configure anything.
 export CLOUD_INIT_USER_DATA_URL="files"   # "files" to use config files, or an URL to go straight to it
 export CLOUD_INIT_CONFIG_LOCATION="/boot" # where on the sdcard c-i will look for user-data, network-config, meta-data files
+export CLOUD_INIT_EXTRA_VERSION=""        # extra stuff to be added to version string
 
 # Default to using e* devices with dhcp, but not wait for them, so user-data needs to be local-only
 # Change to eth0-dhcp-wait to use https:// includes in user-data, or to something else for non-ethernet devices
@@ -24,7 +25,10 @@ pre_umount_final_image__300_prepare_cloud_init_startup() {
 	[[ -f "${CI_TARGET}/root/.not_logged_in_yet" ]] && rm -f "${CI_TARGET}/root/.not_logged_in_yet"
 
 	# if disabled skip configuration
-	[[ "${SKIP_CLOUD_INIT_CONFIG}" == "yes" ]] && return 0
+	if [[ "${SKIP_CLOUD_INIT_CONFIG}" == "yes" ]]; then
+		display_alert "Cloud-init config" "skipped, use cloud-native metadata" ""
+		return 0
+	fi
 
 	display_alert "Configuring cloud-init at" "${CLOUD_INIT_CONFIG_LOCATION}" "info"
 
@@ -141,8 +145,13 @@ pre_customize_image__restore_preserved_systemd_and_netplan_stuff() {
 
 pre_umount_final_image__200_add_ci_suffix_to_version() {
 	export version="${version}-cloud"
-	if [[ "a${CLOUD_INIT_USER_DATA_URL}" != "afiles" ]]; then
-		export version="${version}-custom-userdata"
+	if [[ "a${CLOUD_INIT_EXTRA_VERSION}" != "a" ]]; then
+		export version="${version}-${CLOUD_INIT_EXTRA_VERSION}"
+	fi
+	if [[ "${SKIP_CLOUD_INIT_CONFIG}" != "yes" ]]; then
+		if [[ "a${CLOUD_INIT_USER_DATA_URL}" != "afiles" ]]; then
+			export version="${version}-custom-userdata"
+		fi
 	fi
 	display_alert "Cloud-init setting version to" "${version}" "wrn"
 }
