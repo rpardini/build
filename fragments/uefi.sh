@@ -22,6 +22,9 @@ user_config__add_uefi_grub_packages() {
 		export PACKAGE_LIST_BOARD="${PACKAGE_LIST_BOARD} linux-firmware linux-image-generic"
 		unset KERNELSOURCE # This should make Armbian skip most stuff. At least, I hacked it to.
 	fi
+
+	display_alert "Activating" "UEFI with SERIALCON=${SERIALCON}" ""
+
 }
 
 # @TODO: need a way to disable original initramfs creation, since that is a waste, I need to rebuild for all kernels anyway.

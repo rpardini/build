@@ -2,6 +2,8 @@
 export BOARD_NAME="x86uefi"
 export BOARDFAMILY="x86"
 export KERNEL_TARGET="edge"
+
+# console on VGA
 export SERIALCON="tty1"
 
 add_fragment "uefi"
