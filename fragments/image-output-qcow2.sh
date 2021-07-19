@@ -14,9 +14,14 @@ user_config__200_qemu_host_tools_installed() {
 	fi
 }
 
-post_build_image__900_convert_to_qcow2_img() {
-	display_alert "Converting image to qcow2" "image-output-qcow2" "info"
+# Zerofree the image early after umounting it
+config_post_umount_final_image__200_zerofree() {
+	display_alert "Zerofreeing image" "image-output-qcow2" "info"
+	zerofree -v "${LOOP}p2" || true # @TODO: does it work?
+}
 
-	# Convert the image to qcow2...
+post_build_image__900_convert_to_qcow2_img() {
+	# Can't zerofree here, zerofree needs a loopback not a file.
+	display_alert "Converting image to qcow2" "image-output-qcow2" "info"
 	qemu-img convert -f raw -O qcow2 ${FINALDEST}/${version}.img ${FINALDEST}/${version}.img.qcow2
 }
