@@ -502,7 +502,7 @@ PRE_PREPARE_PARTITIONS
 	fi
 
 	# stage: calculate rootfs size
-	local rootfs_size=$(du -sm $SDCARD/ | cut -f1) # MiB
+	export rootfs_size=$(du -sm $SDCARD/ | cut -f1) # MiB
 	display_alert "Current rootfs size" "$rootfs_size MiB" "info"
 
 	call_hook_point "prepare_image_size" "config_prepare_image_size" << 'PREPARE_IMAGE_SIZE'
@@ -510,6 +510,7 @@ PRE_PREPARE_PARTITIONS
 Called after `${rootfs_size}` is known, but before `${FIXED_IMAGE_SIZE}` is taken into account.
 A good spot to determine `FIXED_IMAGE_SIZE` based on `rootfs_size`.
 UEFISIZE can be set to 0 for no UEFI partition, or to a size in MiB to include one.
+Last chance to set `USE_HOOK_FOR_PARTITION`=yes and then implement create_partition_table hook_point.
 PREPARE_IMAGE_SIZE
 
 	if [[ -n $FIXED_IMAGE_SIZE && $FIXED_IMAGE_SIZE =~ ^[0-9]+$ ]]; then
@@ -560,7 +561,13 @@ PREPARE_IMAGE_SIZE
 	# stage: create partition table
 	display_alert "Creating partitions" "${bootfs:+/boot: $bootfs }root: $ROOTFS_TYPE" "info"
 	parted -s ${SDCARD}.raw -- mklabel ${IMAGE_PARTITION_TABLE}
-	if [[ $ROOTFS_TYPE == nfs ]]; then
+	if [[ "${USE_HOOK_FOR_PARTITION}" == "yes" ]]; then
+		call_hook_point "create_partition_table" <<- 'CREATE_PARTITION_TABLE'
+		*only called when USE_HOOK_FOR_PARTITION=yes to create the complete partition table*
+		Finally, we can get our own partition table. You have to partition ${SDCARD}.raw
+		yourself. Good luck.
+		CREATE_PARTITION_TABLE
+	elif [[ $ROOTFS_TYPE == nfs ]]; then
 		# single /boot partition
 		parted -s ${SDCARD}.raw -- mkpart primary ${parttype[$bootfs]} ${bootstart}s "100%"
 	elif [[ $UEFISIZE -gt 0 ]]; then
@@ -643,6 +650,11 @@ PREPARE_IMAGE_SIZE
 	fi
 	[[ $ROOTFS_TYPE == nfs ]] && echo "/dev/nfs / nfs defaults 0 0" >> $SDCARD/etc/fstab
 	echo "tmpfs /tmp tmpfs defaults,nosuid 0 0" >> $SDCARD/etc/fstab
+
+	call_hook_point "format_partitions" <<- 'FORMAT_PARTITIONS'
+	*if you created your own partitions, this would be a good time to format them*
+	The loop device is mounted, so ${LOOP}p1 is it's first partition etc.
+	FORMAT_PARTITIONS
 
 	# stage: adjust boot script or boot environment
 	if [[ -f $SDCARD/boot/armbianEnv.txt ]]; then
