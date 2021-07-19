@@ -1,13 +1,19 @@
 ## Configuration
 
 export ROOTFS_IN_ROOTFS_SIZE_PERCENT=240 # 2.4 times the size of a simple rootfs seems to hit the target. squeeze to your liking.
+export ROOTFS_IN_ROOTFS_EXPORT_ONLY="no" # If yes, e2img will not be included, but only copied to output/images/xx.e2img
 
-config_prepare_image_size__rootfs_predict_image_size() {
+prepare_image_size__rootfs_predict_image_size() {
 	# For this to work we need a very big image size. We''ll fill it with itself, so get the size and double it at least.
 	# Note: the file is sparse, meaning that is shows larger than it actually is (filled with zeroes).
 	# ROOTFS_IN_ROOTFS_SIZE_PERCENT is the magic number, determined empirically.
 	export FIXED_IMAGE_SIZE=$((rootfs_size * ROOTFS_IN_ROOTFS_SIZE_PERCENT / 100))
 	display_alert "Predicted size of rootfs+rootfs e2img dump to be" "${FIXED_IMAGE_SIZE}Mb" "info"
+
+	if [[ "${ROOTFS_IN_ROOTFS_EXPORT_ONLY}" == "yes" ]]; then
+		display_alert "e2image is export only" "NOT increasing to ${FIXED_IMAGE_SIZE}Mb" "info"
+		unset FIXED_IMAGE_SIZE
+	fi
 }
 
 pre_umount_final_image__prepare_rootfs_inside_rootfs() {
@@ -43,28 +49,39 @@ config_post_umount_final_image__800_rootfs_e2img_inside_rootfs() {
 
 	display_alert "e2image sparse dump done" "sizes: apparent: ${apparent_size} actual: ${actual_size} imgsize: ${FIXED_IMAGE_SIZE}Mb" "info"
 
-	echo -n "[ .... ] Re-mounting..."
-	mount "${ROOT_LOOP_DEV_PART}" "${MOUNT}" && sync
+	if [[ "${ROOTFS_IN_ROOTFS_EXPORT_ONLY}" != "yes" ]]; then
+		echo -n "[ .... ] Re-mounting..."
+		mount "${ROOT_LOOP_DEV_PART}" "${MOUNT}" && sync
 
-	echo -n "Copying..."
-	# pipes and sparse files don't mix. be simple about the copy, although it is huge.
-	cp "${MOUNT}/../rootfs.ext4.e2img" "${MOUNT}/root/rootfs.ext4.e2img" || {
-		echo "" # break a line so error is clearly visible
-		display_alert "e2image sparse copy failed" "sizes: apparent: ${apparent_size} actual: ${actual_size} imgsize: ${FIXED_IMAGE_SIZE}" "err"
-		display_alert "e2image sparse copy failed" "please increase ROOTFS_IN_ROOTFS_SIZE_PERCENT (currently ${ROOTFS_IN_ROOTFS_SIZE_PERCENT})" "err"
-	}
-	sync && sleep 5 && sync
+		echo -n "Copying..."
+		# pipes and sparse files don't mix. be simple about the copy, although it is huge.
+		cp "${MOUNT}/../rootfs.ext4.e2img" "${MOUNT}/root/rootfs.ext4.e2img" || {
+			echo "" # break a line so error is clearly visible
+			display_alert "e2image sparse copy failed" "sizes: apparent: ${apparent_size} actual: ${actual_size} imgsize: ${FIXED_IMAGE_SIZE}" "err"
+			display_alert "e2image sparse copy failed" "please increase ROOTFS_IN_ROOTFS_SIZE_PERCENT (currently ${ROOTFS_IN_ROOTFS_SIZE_PERCENT})" "err"
+		}
+		sync && sleep 5 && sync
 
-	echo -n "Unmount..."
-	umount "${MOUNT}" && sync
+		echo -n "Unmount..."
+		umount "${MOUNT}" && sync
 
-	echo -n "Clean..."
-	#mkdir -p "${DEST}"/images
-	#mv "${MOUNT}"/../rootfs.ext4.e2img "${DEST}/images/${version}.rootfs.ext4.e2img"
-	rm -f "${MOUNT}"/../rootfs.ext4.e2img
+		echo -n "Clean..."
+		rm -f "${MOUNT}"/../rootfs.ext4.e2img
+	else
+		display_alert "e2image rootfs" "not including in rootfs, for export only" ""
+	fi
 
 	echo -n "Sync again..."
 	sync
 
 	echo "done."
+}
+
+post_build_image__800_export_e2img_rootfs() {
+	if [[ "${ROOTFS_IN_ROOTFS_EXPORT_ONLY}" == "yes" ]]; then
+		display_alert "Exporting e2img" "${FINALDEST}/${version}.e2img" "info"
+		cp -v "${SRC}"/.tmp/rootfs.ext4.e2img "${FINALDEST}/${version}.e2img"
+		sync
+		rm -f "${SRC}"/.tmp/rootfs.ext4.e2img
+	fi
 }
