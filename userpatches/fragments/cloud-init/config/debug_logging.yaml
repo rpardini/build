@@ -21,7 +21,7 @@ _log:
 
     [handler_consoleHandler]
     class=StreamHandler
-    level=INFO
+    level=DEBUG
     formatter=arg0Formatter
     args=(sys.stderr,)
 
