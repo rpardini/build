@@ -134,9 +134,10 @@ install_common()
 	# enable automated login to console(s)
 	mkdir -p "${SDCARD}"/etc/systemd/system/getty@.service.d/
 	mkdir -p "${SDCARD}"/etc/systemd/system/serial-getty@.service.d/
+	# @TODO: unhack, maybe just overwrite this override
 	cat <<-EOF > "${SDCARD}"/etc/systemd/system/serial-getty@.service.d/override.conf
 	[Service]
-	ExecStartPre=/bin/sh -c 'exec /bin/sleep 10'
+	#ExecStartPre=/bin/sh -c 'exec /bin/sleep 10'
 	ExecStart=
 	ExecStart=-/sbin/agetty --noissue --autologin root %I $TERM
 	Type=idle
